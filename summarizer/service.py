@@ -140,7 +140,13 @@ def local_fallback_summary(question: str, snippets: list) -> SummaryResponse:
     )
 
 def summarize(question: str, snippets: list) -> SummaryResponse:
+    # Check if API key is available
+    if not api_key:
+        print("❌ No API key available, using fallback")
+        return local_fallback_summary(question, snippets)
+    
     prompt = USER_PROMPT.format(question=question, snippets=format_snippets(snippets))
+    print(f"🔍 Making API call to GPT-4o...")
     
     try:
         response = client.chat.completions.create(
@@ -149,13 +155,13 @@ def summarize(question: str, snippets: list) -> SummaryResponse:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=400,
+            max_tokens=500,
             temperature=0.1  # Lower temperature for more consistent JSON
         )
         content = response.choices[0].message.content.strip()
         
         # Log the raw response for debugging
-        print(f"Raw AI response: {content}")
+        print(f"✅ Raw AI response received: {content[:100]}...")
         
         # Try to clean up common JSON issues
         content = content.strip()
@@ -167,15 +173,17 @@ def summarize(question: str, snippets: list) -> SummaryResponse:
         
         # Parse the JSON response
         summary_data = json.loads(content)
+        print(f"✅ JSON parsed successfully, returning AI response")
         return SummaryResponse(**summary_data)
         
     except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Problematic content: '{content}'")
-        print("Falling back to local summary...")
+        print(f"❌ JSON parsing error: {e}")
+        print(f"❌ Problematic content: '{content}'")
+        print("🔄 Falling back to local summary...")
         return local_fallback_summary(question, snippets)
         
     except Exception as e:
-        print(f"API call error: {e}")
-        print("Falling back to local summary...")
+        print(f"❌ API call error: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
+        print("🔄 Falling back to local summary...")
         return local_fallback_summary(question, snippets)
