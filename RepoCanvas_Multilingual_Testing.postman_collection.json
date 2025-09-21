@@ -1,0 +1,1057 @@
+{
+	"info": {
+		"_postman_id": "multilingual-testing-collection",
+		"name": "RepoCanvas Multi-Language Testing",
+		"description": "Comprehensive testing suite for RepoCanvas multi-language code analysis functionality",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🏥 Health Checks",
+			"item": [
+				{
+					"name": "Backend Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{backend_url}}/health",
+							"host": ["{{backend_url}}"],
+							"path": ["health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Worker Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{worker_url}}/health",
+							"host": ["{{worker_url}}"],
+							"path": ["health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Qdrant Collections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{worker_url}}/collections",
+							"host": ["{{worker_url}}"],
+							"path": ["collections"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔧 Multi-Language Repository Parsing",
+			"item": [
+				{
+					"name": "Parse Python Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/python/cpython.git\",\n  \"branch\": \"main\",\n  \"output_path\": \"./data/python_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse JavaScript Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('js_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/facebook/react.git\",\n  \"branch\": \"main\",\n  \"output_path\": \"./data/react_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse TypeScript Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('ts_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/microsoft/vscode.git\",\n  \"branch\": \"main\",\n  \"output_path\": \"./data/vscode_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse Java Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('java_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/spring-projects/spring-boot.git\",\n  \"branch\": \"main\",\n  \"output_path\": \"./data/spring_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse Go Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('go_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/golang/go.git\",\n  \"branch\": \"master\",\n  \"output_path\": \"./data/golang_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse Rust Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('rust_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/rust-lang/rust.git\",\n  \"branch\": \"master\",\n  \"output_path\": \"./data/rust_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse Local Multi-Language Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('local_parse_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_path\": \"/Users/kritimaheshwari/Desktop/RepoCanvas\",\n  \"output_path\": \"./data/repocanvas_graph.json\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse",
+							"host": ["{{worker_url}}"],
+							"path": ["parse"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 Job Status Monitoring",
+			"item": [
+				{
+					"name": "Check Parse Job Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{worker_url}}/status/{{parse_job_id}}",
+							"host": ["{{worker_url}}"],
+							"path": ["status", "{{parse_job_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Jobs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{worker_url}}/jobs",
+							"host": ["{{worker_url}}"],
+							"path": ["jobs"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🧠 Multi-Language Embedding & Indexing",
+			"item": [
+				{
+					"name": "Index Python Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('python_index_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection_name\": \"python_repository\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"graph_path\": \"./data/python_graph.json\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/index",
+							"host": ["{{worker_url}}"],
+							"path": ["index"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Index JavaScript Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('js_index_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection_name\": \"javascript_repository\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"graph_path\": \"./data/react_graph.json\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/index",
+							"host": ["{{worker_url}}"],
+							"path": ["index"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Index Multi-Language Repository",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('multilang_index_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection_name\": \"repocanvas_multilang\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"graph_path\": \"./data/repocanvas_graph.json\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/index",
+							"host": ["{{worker_url}}"],
+							"path": ["index"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔍 Multi-Language Semantic Search",
+			"item": [
+				{
+					"name": "Search Python Code - Function Definition",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"function that processes payments and validates credit cards\",\n  \"top_k\": 10,\n  \"collection_name\": \"python_repository\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search JavaScript Code - React Components",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"React component that handles user authentication and login\",\n  \"top_k\": 10,\n  \"collection_name\": \"javascript_repository\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Multi-Language - API Endpoints",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"API endpoint that handles file upload and processing\",\n  \"top_k\": 15,\n  \"collection_name\": \"repocanvas_multilang\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Multi-Language - Database Operations",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"database connection and query execution functions\",\n  \"top_k\": 12,\n  \"collection_name\": \"repocanvas_multilang\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Multi-Language - Error Handling",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"error handling and exception management code\",\n  \"top_k\": 10,\n  \"collection_name\": \"repocanvas_multilang\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔬 Full Multi-Language Analysis",
+			"item": [
+				{
+					"name": "Analyze Python Code Flow",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"How does data validation work in this codebase?\",\n  \"top_k\": 8,\n  \"collection_name\": \"python_repository\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"include_full_graph\": false\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/analyze",
+							"host": ["{{worker_url}}"],
+							"path": ["analyze"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze JavaScript Component Lifecycle",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"How do React components handle state management and lifecycle events?\",\n  \"top_k\": 10,\n  \"collection_name\": \"javascript_repository\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"include_full_graph\": false\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/analyze",
+							"host": ["{{worker_url}}"],
+							"path": ["analyze"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze Multi-Language Integration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"How does the backend API communicate with the frontend and worker services?\",\n  \"top_k\": 15,\n  \"collection_name\": \"repocanvas_multilang\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"include_full_graph\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/analyze",
+							"host": ["{{worker_url}}"],
+							"path": ["analyze"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🚀 Complete Pipeline Testing",
+			"item": [
+				{
+					"name": "Parse and Index Python Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('pipeline_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/pallets/flask.git\",\n  \"branch\": \"main\",\n  \"collection_name\": \"flask_multilang_test\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse-and-index",
+							"host": ["{{worker_url}}"],
+							"path": ["parse-and-index"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse and Index TypeScript Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('ts_pipeline_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_url\": \"https://github.com/microsoft/TypeScript.git\",\n  \"branch\": \"main\",\n  \"collection_name\": \"typescript_multilang_test\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse-and-index",
+							"host": ["{{worker_url}}"],
+							"path": ["parse-and-index"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parse and Index Mixed Language Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has job_id\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('job_id');",
+									"    pm.environment.set('mixed_pipeline_job_id', jsonData.job_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"repo_path\": \"/Users/kritimaheshwari/Desktop/RepoCanvas\",\n  \"collection_name\": \"repocanvas_complete_test\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"recreate_collection\": true\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/parse-and-index",
+							"host": ["{{worker_url}}"],
+							"path": ["parse-and-index"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎯 Backend Integration Tests",
+			"item": [
+				{
+					"name": "Backend - Get Graph Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{backend_url}}/graph",
+							"host": ["{{backend_url}}"],
+							"path": ["graph"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Backend - Search Multi-Language Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"file parsing and AST analysis functions\",\n  \"top_k\": 10\n}"
+						},
+						"url": {
+							"raw": "{{backend_url}}/search",
+							"host": ["{{backend_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Backend - Analyze Code Flow",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"How does the embedding generation work across different programming languages?\",\n  \"top_k\": 12,\n  \"include_full_graph\": false\n}"
+						},
+						"url": {
+							"raw": "{{backend_url}}/analyze",
+							"host": ["{{backend_url}}"],
+							"path": ["analyze"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🧪 Language-Specific Test Cases",
+			"item": [
+				{
+					"name": "Test Python - Class Inheritance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"class inheritance and polymorphism in Python\",\n  \"top_k\": 8,\n  \"collection_name\": \"python_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test JavaScript - Async/Await Patterns",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"async await promise handling in JavaScript\",\n  \"top_k\": 8,\n  \"collection_name\": \"javascript_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test TypeScript - Interface Definitions",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"TypeScript interface and type definitions\",\n  \"top_k\": 8,\n  \"collection_name\": \"typescript_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test Go - Goroutines and Channels",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"goroutines channels concurrency in Go\",\n  \"top_k\": 8,\n  \"collection_name\": \"go_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test Rust - Memory Safety",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"memory safety ownership borrowing in Rust\",\n  \"top_k\": 8,\n  \"collection_name\": \"rust_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test Java - Spring Annotations",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"Spring Boot annotations dependency injection\",\n  \"top_k\": 8,\n  \"collection_name\": \"java_repository\"\n}"
+						},
+						"url": {
+							"raw": "{{worker_url}}/search",
+							"host": ["{{worker_url}}"],
+							"path": ["search"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default environment variables if not already set",
+					"if (!pm.environment.get('backend_url')) {",
+					"    pm.environment.set('backend_url', 'http://localhost:8000');",
+					"}",
+					"",
+					"if (!pm.environment.get('worker_url')) {",
+					"    pm.environment.set('worker_url', 'http://localhost:8002');",
+					"}",
+					"",
+					"if (!pm.environment.get('qdrant_url')) {",
+					"    pm.environment.set('qdrant_url', 'http://localhost:6333');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "backend_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "worker_url",
+			"value": "http://localhost:8002", 
+			"type": "string"
+		},
+		{
+			"key": "qdrant_url",
+			"value": "http://localhost:6333",
+			"type": "string"
+		}
+	]
+}
