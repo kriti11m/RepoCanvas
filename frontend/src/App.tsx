@@ -10,7 +10,7 @@ import { ControlsBar } from "@/components/controls-bar"
 import { CyberBackground } from "@/components/cyber-background"
 import { AIChatbot } from "@/components/ai-chatbot"
 import { TestThree } from "@/components/test-three" // Testing three.js
-import { useCursorTrail } from "@/hooks/use-cursor-trail"
+// import { useCursorTrail } from "@/hooks/use-cursor-trail" - DISABLED
 import { NodesZoomInfo } from "@/components/nodes-zoom-info"
 
 function App() {
@@ -26,8 +26,8 @@ function App() {
   const [zoom, setZoom] = useState(1)
   const [nodeCount, setNodeCount] = useState(0)
 
-  // Add cursor trail effect
-  useCursorTrail()
+  // Add cursor trail effect - DISABLED
+  // useCursorTrail()
 
   useEffect(() => {
     console.log("App.tsx component mounted")

@@ -5,6 +5,15 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# Environment files with secrets
+.env
+summarizer/.env
+backend/.env
+worker/.env
+
 # Large data files (keep small essential data)
 worker/data/worker_graph.json
 worker/data/qdrant_demo_graph.json
+
+# Qdrant database storage (should not be in version control)
+qdrant_storage/
