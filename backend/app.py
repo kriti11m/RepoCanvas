@@ -214,6 +214,43 @@ async def health_check():
         }
     }
 
+@app.post("/test-summarizer")
+async def test_summarizer():
+    """Test endpoint to verify summarizer service integration"""
+    try:
+        # Create a sample test request
+        test_snippets = [{
+            "node_id": "test:sample_function:test.py:1",
+            "code": '''def sample_function(user_id: str) -> dict:
+    """Retrieve user information from database"""
+    user = database.find_user(user_id)
+    if not user:
+        raise ValueError("User not found")
+    return {"id": user.id, "name": user.name}'''
+        }]
+        
+        summarizer_data = {
+            "question": "How do I get user information?",
+            "snippets": test_snippets
+        }
+        
+        response = await _call_summarizer_service("/summarize", summarizer_data)
+        
+        return {
+            "success": True,
+            "message": "Summarizer service is working correctly",
+            "test_response": response,
+            "summarizer_url": settings.SUMMARIZER_URL
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Summarizer service test failed",
+            "summarizer_url": settings.SUMMARIZER_URL
+        }
+
 @app.post("/parse")
 async def parse_repository(request: ParseRequest):
     """Parse a repository and create graph.json using worker service"""
@@ -559,18 +596,33 @@ async def analyze_query(request: AnalyzeRequest):
                 
                 summarizer_response = await _call_summarizer_service("/summarize", summarizer_data)
                 result["ai_summary"] = summarizer_response
+                print(f"✅ Summarizer completed successfully")
                 
             except Exception as e:
-                print(f"⚠️ Summarizer failed: {e}, continuing without AI summary")
+                error_msg = str(e)
+                print(f"⚠️ Summarizer failed: {error_msg}, continuing without AI summary")
+                
+                # Provide different error messages based on error type
+                if "503" in error_msg or "unavailable" in error_msg.lower():
+                    caveat = "AI summarization service is currently unavailable"
+                    next_step = "Check if summarizer service is running on " + settings.SUMMARIZER_URL
+                elif "timeout" in error_msg.lower():
+                    caveat = "AI summarization service timed out"
+                    next_step = "Try with fewer code snippets or increase timeout"
+                else:
+                    caveat = f"AI summarization failed: {error_msg}"
+                    next_step = "Review code snippets manually"
+                
                 result["ai_summary"] = {
-                    "error": str(e),
+                    "error": error_msg,
                     "fallback": True,
-                    "one_liner": f"Analysis of {len(snippets)} code components for: {request.query}",
-                    "steps": ["Code analysis completed", "AI summarization unavailable"],
+                    "service_url": settings.SUMMARIZER_URL,
+                    "one_liner": f"Found {len(snippets)} relevant code components for: {request.query}",
+                    "steps": ["Code search completed successfully", "AI summarization unavailable"],
                     "inputs_outputs": [f"Query: {request.query}", f"Found {len(snippets)} relevant code snippets"],
-                    "caveats": ["AI summarization service unavailable"],
-                    "next_steps": ["Review code snippets manually"],
-                    "node_refs": []
+                    "caveats": [caveat],
+                    "next_steps": [next_step, "Review code snippets in the results below"],
+                    "node_refs": [{"node_id": s.get("node_id", ""), "file": s.get("file", "")} for s in snippets[:5]]
                 }
         
         result["processing_time"] = time.time() - start_time
