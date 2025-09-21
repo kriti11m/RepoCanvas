@@ -3,6 +3,7 @@ import argparse
 import os
 import ast
 import json
+from platform import node
 import re
 import logging
 import datetime
@@ -210,7 +211,7 @@ def extract_edges(nodes, name_map):
         name_map (dict): Mapping of function/class names to node IDs
     
     Returns:
-        list: List of edge dictionaries with from/to/type information
+        list: List of edge dictionaries with source/target/type information
     """
     edges = []
     id_by_name = name_map
@@ -224,19 +225,19 @@ def extract_edges(nodes, name_map):
                         called = n.func.id
                         if called in id_by_name:
                             for target_id in id_by_name[called]:
-                                edges.append({"from": node['id'], "to": target_id, "type": "call"})
+                                edges.append({"source": node['id'], "target": target_id, "type": "call"})
                     elif isinstance(n.func, ast.Attribute):
                         attr = n.func.attr
                         if attr in id_by_name:
                             for target_id in id_by_name[attr]:
-                                edges.append({"from": node['id'], "to": target_id, "type": "call", "ambiguous": True})
+                                edges.append({"source": node['id'], "target": target_id, "type": "call", "ambiguous": True})
                 elif isinstance(n, ast.Import):
                     for alias in n.names:
-                        edges.append({"from": node['file'], "to": alias.name, "type": "import"})
+                        edges.append({"source": node['file'], "target": alias.name, "type": "import"})
                 elif isinstance(n, ast.ImportFrom):
                     module = n.module or ""
                     for alias in n.names:
-                        edges.append({"from": node['file'], "to": f"{module}.{alias.name}", "type": "import"})
+                        edges.append({"source": node['file'], "target": f"{module}.{alias.name}", "type": "import"})
         except Exception:
             continue
     return edges
@@ -355,13 +356,35 @@ def save_graph_json(nodes, edges, out_path):
     Returns:
         None: Writes JSON file to disk
     """
+    # Format nodes for backend compatibility - add 'label' field
+    formatted_nodes = []
+    for node in nodes:
+        formatted_node = node.copy()
+        # Add 'label' field using the node name
+        formatted_node['label'] = node.get('name', 'unknown')
+        formatted_nodes.append(formatted_node)
+    
+    # Format edges for backend compatibility - use 'source' and 'target'
+    formatted_edges = []
+    for edge in edges:
+        formatted_edge = {
+            "source": edge.get('from', edge.get('source', '')),
+            "target": edge.get('to', edge.get('target', '')),
+            "type": edge.get('type', 'call')
+        }
+        # Add any additional edge properties
+        for key, value in edge.items():
+            if key not in ['from', 'to', 'source', 'target', 'type']:
+                formatted_edge[key] = value
+        formatted_edges.append(formatted_edge)
+    
     # Prepare the graph data structure
     graph_data = {
-        "nodes": nodes,
-        "edges": edges,
+        "nodes": formatted_nodes,
+        "edges": formatted_edges,
         "metadata": {
-            "node_count": len(nodes),
-            "edge_count": len(edges),
+            "node_count": len(formatted_nodes),
+            "edge_count": len(formatted_edges),
             "generated_by": "RepoCanvas parser",
             "schema_version": "1.0"
         }
@@ -375,8 +398,8 @@ def save_graph_json(nodes, edges, out_path):
         json.dump(graph_data, f, indent=2, ensure_ascii=False)
     
     print(f"Graph saved to {out_path}")
-    print(f"  - Nodes: {len(nodes)}")
-    print(f"  - Edges: {len(edges)}")
+    print(f"  - Nodes: {len(formatted_nodes)}")
+    print(f"  - Edges: {len(formatted_edges)}")
 
 def build_repository_graph(repo_root, output_path=None):
     """
@@ -468,7 +491,11 @@ def make_document_for_node(node, max_lines=40):
     Returns:
         str: Formatted document text for embedding
     """
+    from indexer.embedder import create_multilingual_document
+    return create_multilingual_document(node)
+    
     # Extract key information
+    
     name = node.get('name', 'Unknown')
     file_path = node.get('file', 'Unknown')
     start_line = node.get('start_line', 0)

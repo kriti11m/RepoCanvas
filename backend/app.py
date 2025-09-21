@@ -67,7 +67,11 @@ async def startup_event():
             for node in graph_data.get('nodes', []):
                 graph.add_node(node['id'], **node)
             for edge in graph_data.get('edges', []):
-                graph.add_edge(edge['source'], edge['target'], type=edge['type'])
+                # Handle both formats: 'source'/'target' and 'from'/'to'
+                source = edge.get('source') or edge.get('from')
+                target = edge.get('target') or edge.get('to')
+                if source and target:
+                    graph.add_edge(source, target, type=edge.get('type', 'unknown'))
             
             print(f"✅ Loaded graph with {len(graph.nodes)} nodes and {len(graph.edges)} edges")
         except Exception as e:
