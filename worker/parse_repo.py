@@ -2,6 +2,7 @@
 import os
 import ast
 import json
+import re
 import networkx as nx
 from parser.ts_parser import get_ts_parser, parse_with_ast
 
@@ -404,3 +405,275 @@ def build_repository_graph(repo_root, output_path=None):
     save_graph_json(nodes, edges, output_path)
     
     return nodes, edges, graph
+
+def sanitize_filename(text):
+    """
+    Sanitize text to create safe filenames.
+    
+    Args:
+        text (str): Text to sanitize
+    
+    Returns:
+        str: Safe filename string
+    """
+    # Replace invalid filename characters with underscores
+    safe_text = re.sub(r'[<>:"/\\|?*]', '_', text)
+    # Replace multiple underscores with single underscore
+    safe_text = re.sub(r'_+', '_', safe_text)
+    # Remove leading/trailing underscores
+    safe_text = safe_text.strip('_')
+    # Limit length to avoid filesystem issues
+    if len(safe_text) > 200:
+        safe_text = safe_text[:200]
+    return safe_text
+
+def extract_function_signature(code):
+    """
+    Extract the function signature (first line) from code.
+    
+    Args:
+        code (str): Function/class code
+    
+    Returns:
+        str: Function signature (first line)
+    """
+    lines = code.splitlines()
+    if lines:
+        signature = lines[0].strip()
+        # Remove excessive whitespace
+        signature = ' '.join(signature.split())
+        return signature
+    return ""
+
+def make_document_for_node(node, max_lines=40):
+    """
+    Create a semantic document for a node suitable for embedding.
+    
+    Combines node name, location, docstring, signature, and code snippet
+    into a structured document format.
+    
+    Args:
+        node (dict): Node dictionary with metadata
+        max_lines (int): Maximum lines of code to include (default: 40)
+    
+    Returns:
+        str: Formatted document text for embedding
+    """
+    # Extract key information
+    name = node.get('name', 'Unknown')
+    file_path = node.get('file', 'Unknown')
+    start_line = node.get('start_line', 0)
+    doc = node.get('doc', '').strip()
+    code = node.get('code', '')
+    
+    # Create title with location
+    title = f"{name} - {file_path}:{start_line}"
+    
+    # Extract function signature (first line)
+    signature = extract_function_signature(code)
+    
+    # Get code snippet (first max_lines)
+    code_lines = code.splitlines()
+    snippet_lines = code_lines[:max_lines]
+    snippet = '\n'.join(snippet_lines)
+    
+    # Add truncation indicator if code was truncated
+    if len(code_lines) > max_lines:
+        snippet += f"\n... ({len(code_lines) - max_lines} more lines)"
+    
+    # Build document sections
+    document_parts = []
+    
+    # Title section
+    document_parts.append(f"# {title}")
+    
+    # Signature section
+    if signature:
+        document_parts.append(f"\n## Signature\n```python\n{signature}\n```")
+    
+    # Documentation section
+    if doc:
+        document_parts.append(f"\n## Documentation\n{doc}")
+    
+    # Code section
+    if snippet:
+        document_parts.append(f"\n## Code\n```python\n{snippet}\n```")
+    
+    # Metadata section
+    metadata_parts = []
+    if 'loc' in node:
+        metadata_parts.append(f"Lines of code: {node['loc']}")
+    if 'cyclomatic' in node:
+        metadata_parts.append(f"Complexity: {node['cyclomatic']}")
+    if 'num_calls_in' in node:
+        metadata_parts.append(f"Called by: {node['num_calls_in']} functions")
+    if 'num_calls_out' in node:
+        metadata_parts.append(f"Calls: {node['num_calls_out']} functions")
+    
+    if metadata_parts:
+        metadata_text = " | ".join(metadata_parts)
+        document_parts.append(f"\n## Metrics\n{metadata_text}")
+    
+    return '\n'.join(document_parts)
+
+def save_documents_to_files(nodes, documents_dir="data/documents", max_lines=40):
+    """
+    Generate and save semantic documents for all nodes to individual files.
+    
+    Args:
+        nodes (list): List of node dictionaries
+        documents_dir (str): Directory to save document files
+        max_lines (int): Maximum lines of code per document
+    
+    Returns:
+        tuple: (document_texts, file_paths) - List of document texts and their file paths
+    """
+    # Create documents directory
+    os.makedirs(documents_dir, exist_ok=True)
+    
+    document_texts = []
+    file_paths = []
+    
+    print(f"Generating semantic documents for {len(nodes)} nodes...")
+    
+    for i, node in enumerate(nodes):
+        try:
+            # Generate document text
+            doc_text = make_document_for_node(node, max_lines)
+            document_texts.append(doc_text)
+            
+            # Create safe filename from node ID
+            node_id = node.get('id', f'node_{i}')
+            safe_id = sanitize_filename(node_id)
+            filename = f"{safe_id}.md"
+            file_path = os.path.join(documents_dir, filename)
+            
+            # Save to file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(doc_text)
+            
+            file_paths.append(file_path)
+            
+            if (i + 1) % 10 == 0:
+                print(f"  Generated {i + 1}/{len(nodes)} documents...")
+                
+        except Exception as e:
+            print(f"  Error generating document for node {node.get('id', i)}: {e}")
+            # Add empty document to maintain list alignment
+            document_texts.append("")
+            file_paths.append("")
+            continue
+    
+    print(f"✅ Generated {len([p for p in file_paths if p])} semantic documents")
+    print(f"📁 Documents saved to: {documents_dir}")
+    
+    return document_texts, file_paths
+
+def generate_embedding_documents(nodes, max_lines=40, save_files=True, documents_dir="data/documents"):
+    """
+    Generate semantic documents for embedding from parsed nodes.
+    
+    Args:
+        nodes (list): List of parsed node dictionaries
+        max_lines (int): Maximum lines of code to include per document
+        save_files (bool): Whether to save documents to files
+        documents_dir (str): Directory for saving files (if save_files=True)
+    
+    Returns:
+        dict: Dictionary containing:
+            - 'documents': List of document texts
+            - 'file_paths': List of file paths (if saved)
+            - 'metadata': Generation metadata
+    """
+    print(f"🔄 Generating embedding documents...")
+    print(f"   Max lines per document: {max_lines}")
+    print(f"   Save to files: {save_files}")
+    
+    # Generate documents
+    documents = []
+    file_paths = []
+    
+    for node in nodes:
+        doc_text = make_document_for_node(node, max_lines)
+        documents.append(doc_text)
+    
+    # Save to files if requested
+    if save_files:
+        _, file_paths = save_documents_to_files(nodes, documents_dir, max_lines)
+    
+    # Calculate statistics
+    total_chars = sum(len(doc) for doc in documents)
+    avg_chars = total_chars / len(documents) if documents else 0
+    
+    metadata = {
+        'total_documents': len(documents),
+        'total_characters': total_chars,
+        'average_characters': avg_chars,
+        'max_lines_per_doc': max_lines,
+        'documents_dir': documents_dir if save_files else None,
+        'files_saved': len([p for p in file_paths if p]) if save_files else 0
+    }
+    
+    print(f"✅ Document generation complete!")
+    print(f"   Generated: {metadata['total_documents']} documents")
+    print(f"   Average size: {metadata['average_characters']:.0f} characters")
+    if save_files:
+        print(f"   Files saved: {metadata['files_saved']}")
+    
+    return {
+        'documents': documents,
+        'file_paths': file_paths if save_files else None,
+        'metadata': metadata
+    }
+
+def build_repository_with_documents(repo_root, output_path=None, documents_dir="data/documents", max_lines=40):
+    """
+    Complete pipeline: build repository graph and generate semantic documents.
+    
+    Args:
+        repo_root (str): Root directory of repository to analyze
+        output_path (str, optional): Path to save graph.json
+        documents_dir (str): Directory to save semantic documents
+        max_lines (int): Maximum lines of code per document
+    
+    Returns:
+        dict: Complete analysis results containing nodes, edges, graph, and documents
+    """
+    print(f"🚀 Starting complete repository analysis...")
+    print(f"   Repository: {repo_root}")
+    print(f"   Documents directory: {documents_dir}")
+    
+    # Build repository graph
+    nodes, edges, graph = build_repository_graph(repo_root, output_path)
+    
+    # Generate semantic documents
+    doc_results = generate_embedding_documents(
+        nodes, 
+        max_lines=max_lines, 
+        save_files=True, 
+        documents_dir=documents_dir
+    )
+    
+    results = {
+        'nodes': nodes,
+        'edges': edges,
+        'graph': graph,
+        'documents': doc_results['documents'],
+        'document_paths': doc_results['file_paths'],
+        'document_metadata': doc_results['metadata'],
+        'analysis_summary': {
+            'total_nodes': len(nodes),
+            'total_edges': len(edges),
+            'graph_nodes': len(graph.nodes),
+            'graph_edges': len(graph.edges),
+            'documents_generated': doc_results['metadata']['total_documents'],
+            'documents_saved': doc_results['metadata']['files_saved']
+        }
+    }
+    
+    print(f"\n🎉 Repository analysis complete!")
+    print(f"   📊 Nodes: {results['analysis_summary']['total_nodes']}")
+    print(f"   🔗 Edges: {results['analysis_summary']['total_edges']}")
+    print(f"   📄 Documents: {results['analysis_summary']['documents_generated']}")
+    
+    return results
