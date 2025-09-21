@@ -1,10 +1,19 @@
 # backend/worker/parse_repo.py
+import argparse
 import os
 import ast
 import json
 import re
+import logging
+import datetime
 import networkx as nx
 from parser.ts_parser import get_ts_parser, parse_with_ast
+from parser.utils import clone_repo
+from indexer.embedder import embed_documents, MODEL_NAME
+from indexer.qdrant_client import QdrantClient, create_or_recreate_collection, upsert_embeddings, create_node_payloads, get_collection_info
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def read_file(file_path):
     """Read file contents as string."""
@@ -626,6 +635,252 @@ def generate_embedding_documents(nodes, max_lines=40, save_files=True, documents
         'metadata': metadata
     }
 
+def persist_qdrant_mapping(mapping: dict, output_path: str = "data/qdrant_map.json"):
+    """
+    Persist the Qdrant point_id → node_id mapping to JSON file.
+    
+    Args:
+        mapping (dict): Dictionary mapping point_id to node_id
+        output_path (str): Path to save the mapping file
+    """
+    try:
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        with open(output_path, "w") as f:
+            json.dump(mapping, f, indent=2)
+        
+        logging.info(f"✅ Qdrant mapping saved to {output_path}")
+        logging.info(f"   Mapped {len(mapping)} points")
+    except Exception as e:
+        logging.error(f"❌ Failed to save Qdrant mapping: {e}")
+
+def persist_index_metadata(
+    collection_name: str, 
+    model_name: str, 
+    points_count: int,
+    client: QdrantClient = None,
+    output_path: str = "data/index_status.json"
+):
+    """
+    Persist index metadata including collection info, model name, timestamp, and points count.
+    
+    Args:
+        collection_name (str): Name of the Qdrant collection
+        model_name (str): Name of the embedding model used
+        points_count (int): Number of points in the collection
+        client (QdrantClient, optional): Qdrant client to get additional info
+        output_path (str): Path to save the metadata file
+    """
+    try:
+        metadata = {
+            "collection_name": collection_name,
+            "model_name": model_name,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "points_count": points_count,
+            "indexed_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "completed"
+        }
+        
+        # Add additional collection info if client is provided
+        if client:
+            try:
+                collection_info = get_collection_info(client, collection_name)
+                metadata.update({
+                    "vector_size": collection_info.get("vector_size"),
+                    "distance_metric": collection_info.get("distance"),
+                    "collection_status": collection_info.get("status")
+                })
+            except Exception as e:
+                logging.warning(f"Could not get collection info: {e}")
+        
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        with open(output_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+        
+        logging.info(f"✅ Index metadata saved to {output_path}")
+        logging.info(f"   Collection: {collection_name}")
+        logging.info(f"   Model: {model_name}")
+        logging.info(f"   Points: {points_count}")
+    except Exception as e:
+        logging.error(f"❌ Failed to save index metadata: {e}")
+
+def main():
+    """
+    CLI entrypoint for repository parsing and indexing.
+    """
+    parser = argparse.ArgumentParser(
+        description="Parse repository structure and optionally index embeddings to Qdrant",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Parse repository and save graph only
+  python parse_repo.py --repo https://github.com/user/repo.git
+  
+  # Parse and index to Qdrant
+  python parse_repo.py --repo https://github.com/user/repo.git --index --collection my_repo
+  
+  # Use local repository
+  python parse_repo.py --repo /path/to/local/repo --out custom_graph.json
+        """
+    )
+    
+    parser.add_argument(
+        "--repo", 
+        required=True, 
+        help="Repository URL (git) or local path to analyze"
+    )
+    parser.add_argument(
+        "--out", 
+        default="data/graph.json", 
+        help="Output path for graph JSON file (default: data/graph.json)"
+    )
+    parser.add_argument(
+        "--index", 
+        action="store_true", 
+        help="Index embeddings to Qdrant after parsing"
+    )
+    parser.add_argument(
+        "--collection", 
+        default="repo_canvas_demo", 
+        help="Qdrant collection name (default: repo_canvas_demo)"
+    )
+    parser.add_argument(
+        "--qdrant-url",
+        default=None,
+        help="Qdrant server URL (default: http://localhost:6333 or QDRANT_URL env var)"
+    )
+    parser.add_argument(
+        "--model",
+        default=MODEL_NAME,
+        help=f"Embedding model name (default: {MODEL_NAME})"
+    )
+    parser.add_argument(
+        "--tmp-dir",
+        default="tmp/repo",
+        help="Temporary directory for cloning repositories (default: tmp/repo)"
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    args = parser.parse_args()
+    
+    # Configure logging level
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    try:
+        logging.info("🚀 Starting repository analysis...")
+        logging.info(f"   Repository: {args.repo}")
+        logging.info(f"   Output: {args.out}")
+        logging.info(f"   Indexing: {args.index}")
+        if args.index:
+            logging.info(f"   Collection: {args.collection}")
+            logging.info(f"   Model: {args.model}")
+        
+        # Step 1: Clone repository if it's a URL
+        if args.repo.startswith(('http://', 'https://', 'git@')):
+            logging.info(f"📥 Cloning repository from {args.repo}...")
+            repo_path = clone_repo(args.repo, args.tmp_dir)
+            logging.info(f"✅ Repository cloned to {repo_path}")
+        else:
+            # Local repository path
+            repo_path = args.repo
+            if not os.path.exists(repo_path):
+                raise FileNotFoundError(f"Repository path does not exist: {repo_path}")
+            logging.info(f"📁 Using local repository: {repo_path}")
+        
+        # Step 2: Build nodes from repository
+        logging.info("🔍 Parsing repository files...")
+        nodes, name_map = build_nodes(repo_path)
+        logging.info(f"✅ Found {len(nodes)} nodes")
+        
+        # Step 3: Extract edges between nodes
+        logging.info("🔗 Extracting relationships...")
+        edges = extract_edges(nodes, name_map)
+        logging.info(f"✅ Found {len(edges)} edges")
+        
+        # Step 4: Annotate nodes with metadata
+        logging.info("📊 Annotating nodes with metadata...")
+        annotate_nodes(nodes, edges)
+        logging.info("✅ Node annotation complete")
+        
+        # Step 5: Save graph JSON
+        logging.info(f"💾 Saving graph to {args.out}...")
+        save_graph_json(nodes, edges, args.out)
+        
+        # Step 6: Optional indexing to Qdrant
+        if args.index:
+            logging.info("🔄 Starting embedding and indexing process...")
+            
+            # Generate documents for embedding
+            logging.info("📄 Generating semantic documents...")
+            docs = [make_document_for_node(n) for n in nodes]
+            logging.info(f"✅ Generated {len(docs)} documents")
+            
+            # Generate embeddings
+            logging.info(f"🧠 Generating embeddings with model: {args.model}")
+            embeddings = embed_documents(docs, model_name=args.model)
+            logging.info(f"✅ Generated embeddings: {embeddings.shape}")
+            
+            # Connect to Qdrant
+            qdrant_url = args.qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
+            logging.info(f"🔌 Connecting to Qdrant at {qdrant_url}")
+            client = QdrantClient(url=qdrant_url)
+            
+            # Create or recreate collection
+            logging.info(f"🗃️  Setting up collection: {args.collection}")
+            success = create_or_recreate_collection(client, args.collection, embeddings.shape[1])
+            if not success:
+                raise Exception(f"Failed to create collection: {args.collection}")
+            
+            # Prepare payloads
+            logging.info("📦 Preparing node payloads...")
+            payloads = create_node_payloads(nodes)
+            
+            # Upsert embeddings
+            logging.info("⬆️  Upserting embeddings to Qdrant...")
+            mapping = upsert_embeddings(client, args.collection, embeddings, payloads)
+            
+            if mapping:
+                # Persist Qdrant mapping
+                logging.info("💾 Persisting Qdrant mapping...")
+                persist_qdrant_mapping(mapping, "data/qdrant_map.json")
+                
+                # Persist index metadata
+                logging.info("💾 Persisting index metadata...")
+                persist_index_metadata(
+                    collection_name=args.collection,
+                    model_name=args.model,
+                    points_count=len(mapping),
+                    client=client,
+                    output_path="data/index_status.json"
+                )
+                
+                logging.info("✅ Indexing complete!")
+            else:
+                logging.error("❌ Indexing failed - no mapping returned")
+        
+        logging.info("🎉 Repository analysis complete!")
+        logging.info(f"   📊 Nodes: {len(nodes)}")
+        logging.info(f"   🔗 Edges: {len(edges)}")
+        logging.info(f"   📄 Graph saved: {args.out}")
+        if args.index and mapping:
+            logging.info(f"   🔍 Indexed: {len(mapping)} embeddings")
+            logging.info(f"   🗃️  Collection: {args.collection}")
+    
+    except Exception as e:
+        logging.error(f"❌ Error during repository analysis: {e}")
+        if args.verbose:
+            import traceback
+            logging.error(traceback.format_exc())
+        exit(1)
+
 def build_repository_with_documents(repo_root, output_path=None, documents_dir="data/documents", max_lines=40):
     """
     Complete pipeline: build repository graph and generate semantic documents.
@@ -677,3 +932,6 @@ def build_repository_with_documents(repo_root, output_path=None, documents_dir="
     print(f"   📄 Documents: {results['analysis_summary']['documents_generated']}")
     
     return results
+
+if __name__ == "__main__":
+    main()
