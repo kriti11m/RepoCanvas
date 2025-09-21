@@ -124,7 +124,7 @@ module.exports = nextConfig;`,
       <Card className="h-full glass-card border-0 shadow-2xl">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide">
+            <CardTitle className="text-lg font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide">
               🎯 ANALYSIS
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden glass-button">
@@ -138,8 +138,8 @@ module.exports = nextConfig;`,
               <Package className="w-16 h-16 text-primary mx-auto animate-float" />
               <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-accent animate-pulse" />
             </div>
-            <p className="text-gradient font-bold text-lg font-[family-name:var(--font-orbitron)]">SELECT A NODE</p>
-            <p className="text-muted-foreground">Click on any dependency to explore</p>
+            <p className="text-gradient font-bold text-base font-[family-name:var(--font-orbitron)]">SELECT A NODE</p>
+            <p className="text-muted-foreground text-xs">Click on any dependency to explore</p>
           </div>
         </CardContent>
       </Card>
@@ -147,7 +147,7 @@ module.exports = nextConfig;`,
   }
 
   return (
-    <Card className="h-full glass-card border-0 shadow-2xl animate-slide-in-right animate-glow-pulse">
+    <Card className="h-full glass-card border-0 shadow-2xl animate-slide-in-right animate-glow-pulse shadow-primary/10 glow-border">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -156,7 +156,7 @@ module.exports = nextConfig;`,
               {currentNode.type === "file" && <File className="w-5 h-5 text-white" />}
               {currentNode.type === "function" && <Function className="w-5 h-5 text-white" />}
             </div>
-            <CardTitle className="text-xl font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide">
+            <CardTitle className="text-lg font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide">
               {currentNode.name.toUpperCase()}
             </CardTitle>
             <Sparkles className="w-5 h-5 text-accent animate-pulse" />
@@ -166,11 +166,11 @@ module.exports = nextConfig;`,
           </Button>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className="glass-card border-accent/30 text-accent font-bold px-3 py-1">
+          <Badge className="glass-card border-accent/30 text-accent font-bold px-2 py-1 text-xs">
             ⚡ {currentNode.type.toUpperCase()}
           </Badge>
           {currentNode.version && (
-            <Badge className="glass-card border-primary/30 text-primary font-bold px-3 py-1">
+            <Badge className="glass-card border-primary/30 text-primary font-bold px-2 py-1 text-xs">
               🚀 v{currentNode.version}
             </Badge>
           )}
@@ -179,7 +179,7 @@ module.exports = nextConfig;`,
 
       <CardContent className="space-y-6 h-[calc(100%-140px)]">
         {/* Tab Navigation */}
-        <div className="flex gap-2 p-2 glass-card rounded-2xl">
+        <div className="flex gap-1 p-2 glass-card rounded-xl justify-center">
           {(
             [
               ["summary", "📊"],
@@ -192,7 +192,7 @@ module.exports = nextConfig;`,
               variant={activeTab === tab ? "default" : "ghost"}
               size="sm"
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 text-sm font-bold font-[family-name:var(--font-orbitron)] tracking-wide ${
+              className={`px-3 py-2 text-xs font-bold font-[family-name:var(--font-orbitron)] tracking-wide ${
                 activeTab === tab ? "glass-button" : "hover:bg-primary/10"
               }`}
             >
@@ -205,22 +205,22 @@ module.exports = nextConfig;`,
           {activeTab === "summary" && (
             <div className="space-y-6">
               <div className="glass-card p-4 rounded-2xl">
-                <h3 className="font-bold text-lg mb-3 text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
+                <h3 className="font-bold text-base mb-3 text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
                   OVERVIEW
                 </h3>
-                <p className="text-sm text-foreground leading-relaxed">{currentNode.summary}</p>
+                <p className="text-xs text-foreground leading-relaxed">{currentNode.summary}</p>
               </div>
 
               <div className="glass-card p-4 rounded-2xl">
-                <h3 className="font-bold text-lg mb-4 text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
-                  <Code className="w-5 h-5" />
+                <h3 className="font-bold text-base mb-4 text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
+                  <Code className="w-4 h-4" />
                   EXECUTION STEPS
                 </h3>
-                <ol className="space-y-3">
+                <ol className="space-y-2">
                   {currentNode.steps.map((step, index) => (
-                    <li key={index} className="flex items-start gap-4 text-sm">
-                      <span className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent text-white rounded-xl flex items-center justify-center text-xs font-bold font-[family-name:var(--font-orbitron)] shadow-lg">
+                    <li key={index} className="flex items-start gap-3 text-xs">
+                      <span className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-primary to-accent text-white rounded-lg flex items-center justify-center text-xs font-bold font-[family-name:var(--font-orbitron)] shadow-lg">
                         {index + 1}
                       </span>
                       <span className="text-foreground leading-relaxed pt-1">{step}</span>
@@ -234,11 +234,11 @@ module.exports = nextConfig;`,
           {activeTab === "code" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
+                <h3 className="font-bold text-base text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
                   💻 CODE SAMPLE
                 </h3>
-                <Button className="glass-button h-8 px-3 text-xs font-bold">
-                  <Copy className="w-3 h-3 mr-2" />
+                <Button className="glass-button h-7 px-2 text-xs font-bold">
+                  <Copy className="w-3 h-3 mr-1" />
                   COPY
                 </Button>
               </div>
@@ -250,24 +250,24 @@ module.exports = nextConfig;`,
 
           {activeTab === "dependencies" && (
             <div className="space-y-4">
-              <h3 className="font-bold text-lg text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
+              <h3 className="font-bold text-base text-gradient font-[family-name:var(--font-orbitron)] flex items-center gap-2">
                 🔗 DEPENDENCIES
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {currentNode.dependencies.map((dep, index) => (
                   <div
                     key={index}
-                    className="glass-card p-3 rounded-2xl hover:bg-primary/5 transition-all duration-300"
+                    className="glass-card p-2 rounded-xl hover:bg-primary/5 transition-all duration-300"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                          <Package className="w-4 h-4 text-white" />
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
+                          <Package className="w-3 h-3 text-white" />
                         </div>
-                        <span className="text-sm font-mono font-bold">{dep}</span>
+                        <span className="text-xs font-mono font-bold">{dep}</span>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent/20">
-                        <ChevronRight className="w-4 h-4 text-accent" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-accent/20">
+                        <ChevronRight className="w-3 h-3 text-accent" />
                       </Button>
                     </div>
                   </div>

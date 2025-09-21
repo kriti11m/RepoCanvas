@@ -25,46 +25,46 @@ export function ControlsBar({
   onDemoModeChange,
 }: ControlsBarProps) {
   return (
-    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in">
-      <Card className="glass-card px-6 py-4 shadow-2xl border-0 rounded-3xl animate-glow-pulse">
-        <div className="flex items-center gap-8">
+    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in">
+      <Card className="glass-card px-4 py-2 shadow-2xl border-0 rounded-2xl animate-glow-pulse">
+        <div className="flex items-center gap-4">
           {/* Playback Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
-              className="w-10 h-10 rounded-2xl hover:bg-primary/20 transition-all duration-300"
+              className="w-8 h-8 rounded-xl hover:bg-primary/20 transition-all duration-300"
             >
-              <SkipBack className="w-5 h-5 text-accent" />
+              <SkipBack className="w-4 h-4 text-accent" />
             </Button>
 
             <Button
               onClick={onPlayPause}
               size="icon"
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent hover:from-accent hover:to-primary text-white shadow-xl transform hover:scale-110 transition-all duration-300"
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent hover:from-accent hover:to-primary text-white shadow-xl transform hover:scale-110 transition-all duration-300"
             >
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
-              className="w-10 h-10 rounded-2xl hover:bg-primary/20 transition-all duration-300"
+              className="w-8 h-8 rounded-xl hover:bg-primary/20 transition-all duration-300"
             >
-              <SkipForward className="w-5 h-5 text-accent" />
+              <SkipForward className="w-4 h-4 text-accent" />
             </Button>
           </div>
 
           {/* Speed Control */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label
               htmlFor="speed"
-              className="text-sm font-bold text-gradient font-[family-name:var(--font-orbitron)] whitespace-nowrap flex items-center gap-2"
+              className="text-xs font-bold text-gradient font-[family-name:var(--font-orbitron)] whitespace-nowrap flex items-center gap-1"
             >
-              <Zap className="w-4 h-4" />
+              <Zap className="w-3 h-3" />
               SPEED
             </Label>
-            <div className="w-24 relative">
+            <div className="w-16 relative">
               <Slider
                 id="speed"
                 min={0.1}
@@ -75,24 +75,24 @@ export function ControlsBar({
                 className="w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-primary [&_[role=slider]]:to-accent [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-lg"
               />
             </div>
-            <span className="text-sm font-bold text-gradient font-[family-name:var(--font-orbitron)] font-mono w-10">
+            <span className="text-xs font-bold text-gradient font-[family-name:var(--font-orbitron)] font-mono w-8">
               {speed[0].toFixed(1)}X
             </span>
           </div>
 
           {/* Demo Mode Toggle */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Switch
               id="demo-mode"
               checked={isDemoMode}
               onCheckedChange={onDemoModeChange}
-              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-accent"
+              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-accent scale-75"
             />
             <Label
               htmlFor="demo-mode"
-              className="text-sm font-bold text-gradient font-[family-name:var(--font-orbitron)] whitespace-nowrap flex items-center gap-2"
+              className="text-xs font-bold text-gradient font-[family-name:var(--font-orbitron)] whitespace-nowrap flex items-center gap-1"
             >
-              <Sparkles className="w-4 h-4 animate-pulse" />
+              <Sparkles className="w-3 h-3 animate-pulse" />
               DEMO MODE
             </Label>
           </div>

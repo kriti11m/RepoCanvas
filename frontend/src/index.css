@@ -32,22 +32,34 @@ body {
 
 /* Custom utility classes */
 .glass-card {
-  background: rgba(0, 50, 100, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 153, 255, 0.2);
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
   border-radius: var(--radius);
+  box-shadow: none !important;
 }
 
 .glass-button {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.2), rgba(0, 255, 136, 0.2));
-  border: 1px solid rgba(0, 153, 255, 0.3);
+  background: transparent;
+  border: 1px solid rgba(0, 153, 255, 0.05);
   color: var(--foreground);
   transition: all 0.3s ease;
 }
 
 .glass-button:hover {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.3), rgba(0, 255, 136, 0.3));
+  background: rgba(0, 153, 255, 0.08);
   border-color: var(--accent);
+}
+
+/* Full transparency utility */
+.invisible-glass {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.glass-button:active {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 153, 255, 0.3);
 }
@@ -109,4 +121,10 @@ body {
 
 .animate-grid-move {
   animation: grid-move 20s linear infinite;
+}
+
+.glow-border {
+  box-shadow: 0 0 15px rgba(0, 153, 255, 0.2), 0 0 30px rgba(0, 255, 136, 0.1), inset 0 0 15px rgba(0, 153, 255, 0.05);
+  border: 1px solid transparent;
+  background: linear-gradient(var(--background), var(--background)) padding-box, linear-gradient(45deg, rgba(0, 153, 255, 0.3), rgba(0, 255, 136, 0.3)) border-box;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import { SidePanel } from "@/components/side-panel"
 import { ControlsBar } from "@/components/controls-bar"
 import { CyberBackground } from "@/components/cyber-background"
 import { AIChatbot } from "@/components/ai-chatbot"
+import { TestThree } from "@/components/test-three" // Testing three.js
 
 function App() {
   const [repoUrl, setRepoUrl] = useState("")
@@ -20,6 +21,11 @@ function App() {
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [showSidePanel, setShowSidePanel] = useState(true)
   const [showAIChat, setShowAIChat] = useState(false)
+
+  useEffect(() => {
+    console.log("App.tsx component mounted")
+    console.log("CyberBackground imported:", CyberBackground)
+  }, [])
 
   const handleAnalyze = async () => {
     if (!repoUrl.trim()) return
@@ -38,10 +44,14 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: 'transparent' }}>
       <CyberBackground />
 
-      <header className="glass-card border-0 sticky top-0 z-50 animate-glow-pulse">
+      <header className="border-0 sticky top-0 z-50 animate-glow-pulse" style={{ 
+        background: 'rgba(0, 50, 100, 0.15)', 
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(0, 153, 255, 0.25)' 
+      }}>
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
@@ -106,19 +116,19 @@ function App() {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[calc(100vh-180px)]">
-          <div className={`${showSidePanel ? "lg:col-span-3" : "lg:col-span-4"} transition-all duration-500`}>
-            <Card className="h-full glass-card border-0 shadow-2xl animate-glow-pulse minecraft-border">
-              <CardHeader className="pb-4">
+      <main className="container mx-auto px-12 py-8 relative z-10 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-180px)] mx-auto justify-center ml-8">
+          <div className={`${showSidePanel ? "lg:col-span-4" : "lg:col-span-6"} transition-all duration-500`}>
+            <Card className="h-full invisible-glass border-0 shadow-none">
+              <CardHeader className="pb-4 bg-transparent">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide minecraft-text">
+                  <CardTitle className="text-2xl font-bold text-gradient font-[family-name:var(--font-orbitron)] tracking-wide">
                     DEPENDENCY GRAPH
                   </CardTitle>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Badge
                       variant="secondary"
-                      className="glass-card border-accent/30 text-accent font-bold px-4 py-2 minecraft-border"
+                      className="glass-card border-accent/30 text-accent font-bold px-3 py-1 text-xs"
                     >
                       {selectedNode ? `🎯 ${selectedNode}` : "🔍 No selection"}
                     </Badge>
@@ -126,14 +136,14 @@ function App() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowSidePanel(!showSidePanel)}
-                      className="lg:hidden glass-button minecraft-border"
+                      className="lg:hidden glass-button text-xs px-2"
                     >
                       {showSidePanel ? "Hide Panel" : "Show Panel"}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-0 h-[calc(100%-100px)]">
+              <CardContent className="p-0 h-[calc(100%-100px)] bg-transparent">
                 <GraphCanvas
                   onNodeSelect={handleNodeSelect}
                   selectedNode={selectedNode}
@@ -146,7 +156,7 @@ function App() {
           </div>
 
           {showSidePanel && (
-            <div className="lg:col-span-1 animate-slide-in-right">
+            <div className="lg:col-span-2 animate-slide-in-right">
               <SidePanel
                 selectedNode={selectedNode}
                 isAnalyzing={isAnalyzing}
