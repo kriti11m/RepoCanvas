@@ -30,8 +30,12 @@ class Settings:
         # Embedding settings
         self.EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
         
+        # Worker service settings
+        self.WORKER_URL: str = os.getenv("WORKER_URL", "http://localhost:8002")
+        self.WORKER_TIMEOUT: int = int(os.getenv("WORKER_TIMEOUT", "60"))
+        
         # Summarizer settings
-        self.SUMMARIZER_URL: Optional[str] = os.getenv("SUMMARIZER_URL")
+        self.SUMMARIZER_URL: str = os.getenv("SUMMARIZER_URL", "http://localhost:8001")
         self.SUMMARIZER_TIMEOUT: int = int(os.getenv("SUMMARIZER_TIMEOUT", "30"))
         
         # OpenAI settings (if using direct OpenAI integration)
@@ -106,6 +110,10 @@ class Settings:
                 "collection": self.QDRANT_COLLECTION_NAME,
                 "configured": bool(self.QDRANT_URL)
             },
+            "worker": {
+                "url": self.WORKER_URL,
+                "configured": bool(self.WORKER_URL)
+            },
             "summarizer": {
                 "url": self.SUMMARIZER_URL,
                 "openai_configured": bool(self.OPENAI_API_KEY),
@@ -140,6 +148,10 @@ QDRANT_TIMEOUT=30
 
 # Embedding Model
 EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+# Worker Service (Repository Analysis)
+WORKER_URL=http://localhost:8002
+WORKER_TIMEOUT=60
 
 # AI Summarizer Service
 SUMMARIZER_URL=http://localhost:8001
