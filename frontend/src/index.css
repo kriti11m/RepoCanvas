@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Updated color scheme for cyber/minecraft theme */
+  --background: #000011;
+  --foreground: #00ffff;
+  --primary: #0099ff;
+  --accent: #00ff88;
+  --muted: #001122;
+  --muted-foreground: #66ccff;
+  --border: #003366;
+  --ring: #00ccff;
+  --card: rgba(0, 50, 100, 0.1);
+  --popover: rgba(0, 20, 40, 0.95);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 0.625rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* Custom utility classes */
+.glass-card {
+  background: rgba(0, 50, 100, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 153, 255, 0.2);
+  border-radius: var(--radius);
+}
+
+.glass-button {
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.2), rgba(0, 255, 136, 0.2));
+  border: 1px solid rgba(0, 153, 255, 0.3);
+  color: var(--foreground);
+  transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.3), rgba(0, 255, 136, 0.3));
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 153, 255, 0.3);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #00ccff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.minecraft-border {
+  border-style: solid;
+  border-image: linear-gradient(45deg, var(--primary), var(--accent)) 1;
+}
+
+.minecraft-text {
+  text-shadow: 2px 2px 0px rgba(0, 153, 255, 0.5);
+}
+
+/* Animations */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(0, 153, 255, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(0, 153, 255, 0.8), 0 0 30px rgba(0, 255, 136, 0.3); }
+}
+
+@keyframes pulse-node {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes grid-move {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-pulse-node {
+  animation: pulse-node 2s ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out;
+}
+
+.animate-grid-move {
+  animation: grid-move 20s linear infinite;
+}
