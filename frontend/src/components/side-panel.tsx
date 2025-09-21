@@ -147,7 +147,7 @@ module.exports = nextConfig;`,
   }
 
   return (
-    <Card className="h-full glass-card border-0 shadow-2xl animate-slide-in-right animate-glow-pulse shadow-primary/10 glow-border">
+    <Card className="h-full glass-card border-2 border-primary/30 shadow-2xl animate-slide-in-right animate-glow-pulse shadow-primary/20 glow-border z-40 relative">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

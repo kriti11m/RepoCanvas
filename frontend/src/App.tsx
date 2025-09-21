@@ -10,6 +10,8 @@ import { ControlsBar } from "@/components/controls-bar"
 import { CyberBackground } from "@/components/cyber-background"
 import { AIChatbot } from "@/components/ai-chatbot"
 import { TestThree } from "@/components/test-three" // Testing three.js
+import { useCursorTrail } from "@/hooks/use-cursor-trail"
+import { NodesZoomInfo } from "@/components/nodes-zoom-info"
 
 function App() {
   const [repoUrl, setRepoUrl] = useState("")
@@ -21,6 +23,11 @@ function App() {
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [showSidePanel, setShowSidePanel] = useState(true)
   const [showAIChat, setShowAIChat] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [nodeCount, setNodeCount] = useState(0)
+
+  // Add cursor trail effect
+  useCursorTrail()
 
   useEffect(() => {
     console.log("App.tsx component mounted")
@@ -47,18 +54,17 @@ function App() {
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: 'transparent' }}>
       <CyberBackground />
 
-      <header className="border-0 sticky top-0 z-50 animate-glow-pulse" style={{ 
-        background: 'rgba(0, 50, 100, 0.15)', 
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(0, 153, 255, 0.25)' 
+      <header className="border-0 sticky top-0 z-50" style={{ 
+        background: 'transparent', 
+        backdropFilter: 'none'
       }}>
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg animate-pulse-node minecraft-border">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg animate-pulse-node minecraft-border animate-glow-pulse">
                 <GitBranch className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-black text-gradient font-[family-name:var(--font-orbitron)] tracking-wider minecraft-text">
+              <h1 className="text-2xl font-black text-gradient font-[family-name:var(--font-orbitron)] tracking-wider minecraft-text animate-glow-pulse">
                 REPOCANVAS
               </h1>
               <Sparkles className="w-5 h-5 text-accent animate-pulse" />
@@ -70,25 +76,15 @@ function App() {
                   placeholder="🚀 Enter repository URL (e.g., https://github.com/user/repo)"
                   value={repoUrl}
                   onChange={(e) => setRepoUrl(e.target.value)}
-                  className="glass-card border-primary/30 font-mono text-sm h-12 text-lg placeholder:text-muted-foreground/70 focus:border-accent focus:ring-accent/50 transition-all duration-300 minecraft-border"
+                  className="glass-card border-primary/30 font-mono h-12 text-lg placeholder:text-muted-foreground/70 focus:border-accent focus:ring-accent/50 transition-all duration-300 minecraft-border"
                 />
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-accent z-10" />
-                <Input
-                  placeholder="🔍 Search dependencies..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="glass-card border-primary/30 pl-12 w-72 h-12 text-lg focus:border-accent focus:ring-accent/50 transition-all duration-300 minecraft-border"
-                />
               </div>
 
               <Button
                 onClick={handleAnalyze}
                 disabled={!repoUrl.trim() || isAnalyzing}
-                className="glass-button h-12 px-8 text-lg font-bold font-[family-name:var(--font-orbitron)] tracking-wide shadow-lg minecraft-border"
+                className="glass-button h-12 px-8 text-lg font-bold font-[family-name:var(--font-orbitron)] tracking-wide shadow-lg minecraft-border animate-glow-pulse"
               >
                 {isAnalyzing ? (
                   <>
@@ -108,7 +104,7 @@ function App() {
               variant="ghost"
               size="icon"
               onClick={() => setShowAIChat(!showAIChat)}
-              className="glass-card w-12 h-12 hover:bg-primary/20 transition-all duration-300 minecraft-border"
+              className="glass-card w-12 h-12 hover:bg-primary/20 transition-all duration-300 minecraft-border animate-glow-pulse"
             >
               <Bot className="w-5 h-5 text-accent" />
             </Button>
@@ -150,6 +146,9 @@ function App() {
                   isPlaying={isPlaying}
                   speed={speed[0]}
                   searchQuery={searchQuery}
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                  onNodeCountChange={setNodeCount}
                 />
               </CardContent>
             </Card>
@@ -167,14 +166,22 @@ function App() {
         </div>
       </main>
 
-      <ControlsBar
-        isPlaying={isPlaying}
-        onPlayPause={() => setIsPlaying(!isPlaying)}
-        speed={speed}
-        onSpeedChange={setSpeed}
-        isDemoMode={isDemoMode}
-        onDemoModeChange={setIsDemoMode}
-      />
+      {/* Centered control components below dependency graph */}
+      <div className="fixed bottom-16 left-[45%] transform -translate-x-1/2 flex items-center gap-6 z-60">
+        <div>
+          <ControlsBar
+            isPlaying={isPlaying}
+            onPlayPause={() => setIsPlaying(!isPlaying)}
+            speed={speed}
+            onSpeedChange={setSpeed}
+            isDemoMode={isDemoMode}
+            onDemoModeChange={setIsDemoMode}
+          />
+        </div>
+        <div>
+          <NodesZoomInfo nodeCount={nodeCount} zoom={zoom} />
+        </div>
+      </div>
 
       {showAIChat && <AIChatbot onClose={() => setShowAIChat(false)} />}
     </div>
