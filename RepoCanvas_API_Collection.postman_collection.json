@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "RepoCanvas API Testing",
+    "description": "Complete API testing collection for RepoCanvas project",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check if the API is running and all services are healthy"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Root Endpoint",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"],
+          "path": [""]
+        },
+        "description": "Basic API information endpoint"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Repository Graph",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/graph",
+          "host": ["{{base_url}}"],
+          "path": ["graph"]
+        },
+        "description": "Retrieve the complete repository dependency graph with nodes and edges"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Search Code (Mock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"parse file function\",\n  \"top_k\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Search for code snippets using semantic similarity (currently returns mock data)"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get Answer (Mock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"How does the parse_file function work?\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/answer",
+          "host": ["{{base_url}}"],
+          "path": ["answer"]
+        },
+        "description": "Get an answer with dependency path analysis (currently returns mock data)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Summarize Code (Mock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"def parse_file(file_path):\\n    if not os.path.exists(file_path):\\n        return []\\n    # Parse code and extract functions\\n    extension = get_file_extension(file_path)\\n    language = get_language_from_extension(extension)\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/summarize",
+          "host": ["{{base_url}}"],
+          "path": ["summarize"]
+        },
+        "description": "Summarize code or documentation (currently returns mock data)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Search Complex Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"function that reads files and parses Python code using AST\",\n  \"top_k\": 10\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Test search with more complex natural language query"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Analysis Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the dependency path from parse_file to the tree-sitter parser?\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/answer",
+          "host": ["{{base_url}}"],
+          "path": ["answer"]
+        },
+        "description": "Test dependency analysis with specific question about code architecture"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Large Code Summarization",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"def build_repository_graph(repo_root, output_path=None):\\n    if output_path is None:\\n        output_path = os.path.join(repo_root, 'graph.json')\\n    \\n    print(f'Analyzing repository: {repo_root}')\\n    \\n    # Step 1: Parse all files and build nodes\\n    nodes, name_map = build_nodes(repo_root)\\n    print(f'Found {len(nodes)} nodes')\\n    \\n    # Step 2: Extract edges between nodes\\n    edges = extract_edges(nodes, name_map)\\n    print(f'Found {len(edges)} edges')\\n    \\n    # Step 3: Annotate nodes with metadata\\n    annotate_nodes(nodes, edges)\\n    print('Annotated nodes with metadata')\\n    \\n    # Step 4: Build NetworkX graph\\n    graph = build_graph(nodes, edges)\\n    print(f'Built NetworkX graph: {len(graph.nodes)} nodes, {len(graph.edges)} edges')\\n    \\n    # Step 5: Save to JSON\\n    save_graph_json(nodes, edges, output_path)\\n    \\n    return nodes, edges, graph\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/summarize",
+          "host": ["{{base_url}}"],
+          "path": ["summarize"]
+        },
+        "description": "Test summarization with a larger, more complex code snippet"
+      },
+      "response": []
+    }
+  ]
+}
