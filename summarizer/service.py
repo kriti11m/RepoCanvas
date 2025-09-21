@@ -65,6 +65,7 @@ def local_fallback_summary(question: str, snippets: list) -> SummaryResponse:
             steps=[],
             inputs_outputs=[],
             caveats=[],
+            next_steps=[],
             node_refs=[]
         )
     
@@ -99,6 +100,30 @@ def local_fallback_summary(question: str, snippets: list) -> SummaryResponse:
     if not steps:
         steps = ["Processes input data", "Performs business logic", "Returns result"]
     
+    # Generate contextual next steps
+    next_steps = []
+    if 'auth' in question.lower() or 'login' in question.lower():
+        next_steps = [
+            "Add input validation and error handling",
+            "Consider implementing rate limiting for failed attempts", 
+            "Add logging for security monitoring",
+            "Test with various user scenarios"
+        ]
+    elif 'payment' in question.lower():
+        next_steps = [
+            "Add transaction logging and audit trail",
+            "Implement proper error handling for failed payments",
+            "Add security measures for sensitive data",
+            "Test with different payment scenarios"
+        ]
+    else:
+        next_steps = [
+            "Add comprehensive error handling",
+            "Implement proper logging",
+            "Add unit tests for edge cases",
+            "Review security implications"
+        ]
+    
     return SummaryResponse(
         one_liner=one_liner,
         steps=steps[:4],  # Limit to 4 steps max
@@ -107,6 +132,7 @@ def local_fallback_summary(question: str, snippets: list) -> SummaryResponse:
             "Output: processed result or status"
         ],
         caveats=["Summary generated locally - limited analysis"],
+        next_steps=next_steps[:4],  # Limit to 4 next steps
         node_refs=[{
             "node_id": snippet['node_id'],
             "excerpt_line": "see full function code"

@@ -6,4 +6,5 @@ class SummaryResponse(BaseModel):
     steps: List[str]
     inputs_outputs: List[str]
     caveats: List[str]
+    next_steps: List[str]  # New field for developer guidance
     node_refs: List[Dict[str, str]]
