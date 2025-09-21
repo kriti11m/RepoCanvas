@@ -22,12 +22,23 @@ interface GraphCanvasProps {
   isPlaying: boolean
   speed: number
   searchQuery: string
+  zoom: number
+  onZoomChange: (zoom: number) => void
+  onNodeCountChange: (count: number) => void
 }
 
-export function GraphCanvas({ onNodeSelect, selectedNode, isPlaying, speed, searchQuery }: GraphCanvasProps) {
+export function GraphCanvas({ 
+  onNodeSelect, 
+  selectedNode, 
+  isPlaying, 
+  speed, 
+  searchQuery,
+  zoom,
+  onZoomChange,
+  onNodeCountChange
+}: GraphCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
@@ -46,6 +57,11 @@ export function GraphCanvas({ onNodeSelect, selectedNode, isPlaying, speed, sear
   const filteredNodes = nodes.filter(
     (node) => searchQuery === "" || node.label.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  // Update node count when filtered nodes change
+  useEffect(() => {
+    onNodeCountChange(filteredNodes.length)
+  }, [filteredNodes.length, onNodeCountChange])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -216,10 +232,10 @@ export function GraphCanvas({ onNodeSelect, selectedNode, isPlaying, speed, sear
     setIsDragging(false)
   }
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev * 1.2, 3))
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev / 1.2, 0.3))
+  const handleZoomIn = () => onZoomChange(Math.min(zoom * 1.2, 3))
+  const handleZoomOut = () => onZoomChange(Math.max(zoom / 1.2, 0.3))
   const handleReset = () => {
-    setZoom(1)
+    onZoomChange(1)
     setPan({ x: 0, y: 0 })
   }
 
@@ -278,21 +294,6 @@ export function GraphCanvas({ onNodeSelect, selectedNode, isPlaying, speed, sear
         >
           <RotateCcw className="w-5 h-5 text-accent" />
         </Button>
-      </div>
-
-      <div className="absolute bottom-6 left-6">
-        <Card className="glass-card px-4 py-3 animate-glow-pulse">
-          <div className="flex items-center gap-3 text-sm">
-            <Sparkles className="w-4 h-4 text-accent animate-pulse" />
-            <span className="text-gradient font-bold font-[family-name:var(--font-orbitron)]">
-              NODES: {filteredNodes.length}
-            </span>
-            <span className="text-muted-foreground">|</span>
-            <span className="text-gradient font-bold font-[family-name:var(--font-orbitron)]">
-              ZOOM: {Math.round(zoom * 100)}%
-            </span>
-          </div>
-        </Card>
       </div>
     </div>
   )
