@@ -1,0 +1,273 @@
+{
+  "info": {
+    "name": "RepoCanvas Worker Service API",
+    "description": "Complete API collection for testing the RepoCanvas Worker Service endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "worker_url",
+      "value": "http://localhost:8002",
+      "type": "string"
+    },
+    {
+      "key": "job_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/",
+              "host": ["{{worker_url}}"],
+              "path": [""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/health",
+              "host": ["{{worker_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Repository Operations",
+      "item": [
+        {
+          "name": "Parse Repository (Git URL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.job_id) {",
+                  "        pm.collectionVariables.set('job_id', response.job_id);",
+                  "        console.log('Job ID saved:', response.job_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repo_url\": \"https://github.com/octocat/Hello-World.git\",\n  \"branch\": \"main\"\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/parse",
+              "host": ["{{worker_url}}"],
+              "path": ["parse"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Parse Repository (Local Path)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repo_path\": \"/path/to/local/repository\",\n  \"output_path\": \"/custom/output/graph.json\"\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/parse",
+              "host": ["{{worker_url}}"],
+              "path": ["parse"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Index Repository to Qdrant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection_name\": \"test_repo\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"graph_path\": \"data/graph.json\",\n  \"recreate_collection\": true\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/index",
+              "host": ["{{worker_url}}"],
+              "path": ["index"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Parse and Index (Complete Pipeline)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repo_url\": \"https://github.com/octocat/Hello-World.git\",\n  \"branch\": \"main\",\n  \"collection_name\": \"hello_world_repo\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"model_name\": \"all-MiniLM-L6-v2\",\n  \"recreate_collection\": true\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/parse-and-index",
+              "host": ["{{worker_url}}"],
+              "path": ["parse-and-index"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Search & Analysis",
+      "item": [
+        {
+          "name": "Semantic Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"hello world function\",\n  \"top_k\": 10,\n  \"collection_name\": \"test_repo\",\n  \"qdrant_url\": \"http://localhost:6333\"\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/search",
+              "host": ["{{worker_url}}"],
+              "path": ["search"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Full Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"payment processing function\",\n  \"top_k\": 10,\n  \"collection_name\": \"test_repo\",\n  \"qdrant_url\": \"http://localhost:6333\",\n  \"include_full_graph\": false\n}"
+            },
+            "url": {
+              "raw": "{{worker_url}}/analyze",
+              "host": ["{{worker_url}}"],
+              "path": ["analyze"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Job Management",
+      "item": [
+        {
+          "name": "Get Job Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/status/{{job_id}}",
+              "host": ["{{worker_url}}"],
+              "path": ["status", "{{job_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/jobs",
+              "host": ["{{worker_url}}"],
+              "path": ["jobs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel/Delete Job",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/jobs/{{job_id}}",
+              "host": ["{{worker_url}}"],
+              "path": ["jobs", "{{job_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Qdrant Management",
+      "item": [
+        {
+          "name": "List Qdrant Collections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{worker_url}}/collections",
+              "host": ["{{worker_url}}"],
+              "path": ["collections"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
