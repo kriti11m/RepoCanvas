@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import time
@@ -12,6 +12,10 @@ from qdrant_client.http import models
 from qdrant_client.models import Distance, VectorParams
 import requests
 from dotenv import load_dotenv
+from pydantic import BaseModel
+
+# Import configuration
+from config import settings
 
 # Load environment variables
 load_dotenv()
@@ -74,6 +78,74 @@ async def startup_event():
             print(f"❌ Failed to load graph: {e}")
     
     print("🚀 Backend API started successfully!")
+
+# Pydantic Models for API requests
+class ParseRequest(BaseModel):
+    repo_url: Optional[str] = None
+    repo_path: Optional[str] = None
+    branch: str = "main"
+    output_path: Optional[str] = None
+
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 10
+
+class AnalyzeRequest(BaseModel):
+    query: str
+    top_k: int = 10
+    include_summary: bool = True
+
+# Service Integration Functions
+async def _call_worker_service(endpoint: str, method: str = "GET", data: dict = None) -> dict:
+    """Make HTTP calls to worker service"""
+    url = f"{settings.WORKER_URL}{endpoint}"
+    
+    try:
+        timeout = aiohttp.ClientTimeout(total=settings.WORKER_TIMEOUT)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            if method == "GET":
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        error_text = await response.text()
+                        raise HTTPException(status_code=response.status, detail=f"Worker service error: {error_text}")
+            elif method == "POST":
+                async with session.post(url, json=data) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        error_text = await response.text()
+                        raise HTTPException(status_code=response.status, detail=f"Worker service error: {error_text}")
+            elif method == "DELETE":
+                async with session.delete(url) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        error_text = await response.text()
+                        raise HTTPException(status_code=response.status, detail=f"Worker service error: {error_text}")
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=503, detail=f"Worker service unavailable: {str(e)}")
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Worker service timeout")
+
+async def _call_summarizer_service(endpoint: str, data: dict) -> dict:
+    """Make HTTP calls to summarizer service"""
+    url = f"{settings.SUMMARIZER_URL}{endpoint}"
+    
+    try:
+        timeout = aiohttp.ClientTimeout(total=settings.SUMMARIZER_TIMEOUT)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, json=data) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    error_text = await response.text()
+                    raise HTTPException(status_code=response.status, detail=f"Summarizer service error: {error_text}")
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=503, detail=f"Summarizer service unavailable: {str(e)}")
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Summarizer service timeout")
 
 async def _check_qdrant_health():
     """Check if Qdrant is available and has data"""
@@ -143,21 +215,90 @@ async def health_check():
     }
 
 @app.post("/parse")
-async def parse_repository(request: dict):
-    """Parse a repository and create graph.json"""
-    return {
-        "success": True,
-        "message": "Repository parsing initiated",
-        "graph_path": "/data/graph.json",
-        "processing_time": 0.5,
-        "repo_url": request.get("repo_url", ""),
-        "branch": request.get("branch", "main"),
-        "stats": {
-            "files_processed": 42,
-            "functions_found": 156,
-            "classes_found": 23
+async def parse_repository(request: ParseRequest):
+    """Parse a repository and create graph.json using worker service"""
+    try:
+        # Forward request to worker service
+        worker_data = {
+            "repo_url": request.repo_url,
+            "repo_path": request.repo_path,
+            "branch": request.branch,
+            "output_path": request.output_path
         }
-    }
+        
+        response = await _call_worker_service("/parse", "POST", worker_data)
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse repository: {str(e)}")
+
+@app.post("/parse-and-index")
+async def parse_and_index_repository(request: ParseRequest):
+    """Parse repository and index to Qdrant using worker service"""
+    try:
+        # Forward request to worker service
+        worker_data = {
+            "repo_url": request.repo_url,
+            "repo_path": request.repo_path,
+            "branch": request.branch,
+            "collection_name": settings.QDRANT_COLLECTION_NAME,
+            "qdrant_url": settings.QDRANT_URL,
+            "recreate_collection": True
+        }
+        
+        response = await _call_worker_service("/parse-and-index", "POST", worker_data)
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse and index repository: {str(e)}")
+
+@app.get("/status/{job_id}")
+async def get_job_status(job_id: str):
+    """Get job status from worker service"""
+    try:
+        response = await _call_worker_service(f"/status/{job_id}")
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get job status: {str(e)}")
+
+@app.get("/jobs")
+async def list_jobs():
+    """List all jobs from worker service"""
+    try:
+        response = await _call_worker_service("/jobs")
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list jobs: {str(e)}")
+
+@app.post("/index")
+async def index_repository(request: dict):
+    """Index repository to Qdrant using worker service"""
+    try:
+        response = await _call_worker_service("/index", "POST", request)
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to index repository: {str(e)}")
+
+@app.delete("/jobs/{job_id}")
+async def delete_job(job_id: str):
+    """Delete a specific job via worker service"""
+    try:
+        response = await _call_worker_service(f"/jobs/{job_id}", "DELETE")
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete job: {str(e)}")
 
 
 
@@ -184,29 +325,36 @@ async def get_graph():
         }
 
 @app.post("/search")
-async def search_nodes(request: dict):
-    """Semantic search for relevant nodes using Qdrant"""
-    query = request.get("query", "")
-    top_k = request.get("top_k", 10)
-    start_time = time.time()
-    
-    if not qdrant_client:
-        # Fallback to mock results if Qdrant not available
-        results = await _fallback_search(query, top_k)
-    else:
-        try:
-            # Real Qdrant search
-            results = await _qdrant_search(query, top_k)
-        except Exception as e:
-            print(f"Qdrant search failed: {e}")
-            results = await _fallback_search(query, top_k)
-    
-    return {
-        "results": results,
-        "query": query,
-        "total_results": len(results),
-        "processing_time": time.time() - start_time
-    }
+async def search_nodes(request: SearchRequest):
+    """Semantic search for relevant nodes using worker service"""
+    try:
+        # Forward request to worker service
+        worker_data = {
+            "query": request.query,
+            "top_k": request.top_k,
+            "collection_name": settings.QDRANT_COLLECTION_NAME,
+            "qdrant_url": settings.QDRANT_URL
+        }
+        
+        response = await _call_worker_service("/search", "POST", worker_data)
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Fallback to local search if worker service fails
+        print(f"Worker search failed: {e}, falling back to local search")
+        start_time = time.time()
+        results = await _fallback_search(request.query, request.top_k)
+        
+        return {
+            "success": True,
+            "results": results,
+            "query": request.query,
+            "total_results": len(results),
+            "processing_time": time.time() - start_time,
+            "fallback": True
+        }
 
 async def _qdrant_search(query: str, top_k: int) -> List[Dict]:
     """Perform semantic search using Qdrant with vector embeddings"""
@@ -350,65 +498,111 @@ async def _fallback_search(query: str, top_k: int) -> List[Dict]:
     ][:top_k]
 
 @app.post("/analyze")
-async def analyze_query(request: dict):
-    """Full analysis: search + pathfinding + summarization"""
-    query = request.get("query", "")
-    top_k = request.get("top_k", 10)
-    include_full_graph = request.get("include_full_graph", False)
+async def analyze_query(request: AnalyzeRequest):
+    """Complete analysis pipeline: search + graph analysis + AI summarization"""
     start_time = time.time()
     
     try:
-        # Step 1: Semantic search
-        search_results = []
-        if not qdrant_client:
-            search_results = await _fallback_search(query, top_k)
-        else:
-            try:
-                search_results = await _qdrant_search(query, top_k)
-            except Exception as e:
-                print(f"Search failed: {e}")
-                search_results = await _fallback_search(query, top_k)
+        # Step 1: Get analysis from worker service
+        worker_data = {
+            "query": request.query,
+            "top_k": request.top_k,
+            "collection_name": settings.QDRANT_COLLECTION_NAME,
+            "qdrant_url": settings.QDRANT_URL,
+            "include_full_graph": False
+        }
         
-        if not search_results:
+        print(f"🔍 Calling worker /analyze for query: {request.query}")
+        worker_response = await _call_worker_service("/analyze", "POST", worker_data)
+        
+        if not worker_response.get("success", False):
             return {
-                "answer_path": [],
-                "path_edges": [],
-                "snippets": [],
-                "summary": None,
-                "graph": graph_data if include_full_graph else None,
+                "success": False,
+                "error": f"Worker analysis failed: {worker_response.get('error', 'Unknown error')}",
+                "query": request.query,
                 "processing_time": time.time() - start_time
             }
         
-        # Step 2: Extract node IDs and compute paths
-        node_ids = [result["node_id"] for result in search_results]
-        answer_path, path_edges = _compute_answer_path(node_ids)
+        # Extract data from worker response
+        snippets = worker_response.get("snippets", [])
+        answer_path = worker_response.get("answer_path", [])
+        path_edges = worker_response.get("path_edges", [])
+        worker_summary = worker_response.get("summary", {})
         
-        # Step 3: Get code snippets for path nodes
-        snippets = _get_code_snippets(answer_path)
-        
-        # Step 4: Call summarizer service
-        summary = None
-        summarizer_url = os.getenv("SUMMARIZER_URL")
-        if summarizer_url and snippets:
-            try:
-                summary = await _call_summarizer(snippets, query, summarizer_url)
-            except Exception as e:
-                print(f"Summarization failed: {e}")
-                summary = _generate_fallback_summary(snippets, query)
-        else:
-            summary = _generate_fallback_summary(snippets, query)
-        
-        return {
+        result = {
+            "success": True,
+            "query": request.query,
             "answer_path": answer_path,
             "path_edges": path_edges,
             "snippets": snippets,
-            "summary": summary,
-            "graph": graph_data if include_full_graph else None,
+            "worker_summary": worker_summary,
             "processing_time": time.time() - start_time
         }
         
+        # Step 2: Get AI summarization if requested and snippets available
+        if request.include_summary and snippets:
+            try:
+                print(f"🤖 Calling summarizer for {len(snippets)} snippets")
+                
+                # Prepare snippets for summarizer (it expects node_id and code fields)
+                summarizer_snippets = []
+                for snippet in snippets:
+                    summarizer_snippets.append({
+                        "node_id": snippet.get("node_id", "unknown"),
+                        "code": snippet.get("code", snippet.get("snippet", ""))
+                    })
+                
+                summarizer_data = {
+                    "question": request.query,
+                    "snippets": summarizer_snippets
+                }
+                
+                summarizer_response = await _call_summarizer_service("/summarize", summarizer_data)
+                result["ai_summary"] = summarizer_response
+                
+            except Exception as e:
+                print(f"⚠️ Summarizer failed: {e}, continuing without AI summary")
+                result["ai_summary"] = {
+                    "error": str(e),
+                    "fallback": True,
+                    "one_liner": f"Analysis of {len(snippets)} code components for: {request.query}",
+                    "steps": ["Code analysis completed", "AI summarization unavailable"],
+                    "inputs_outputs": [f"Query: {request.query}", f"Found {len(snippets)} relevant code snippets"],
+                    "caveats": ["AI summarization service unavailable"],
+                    "next_steps": ["Review code snippets manually"],
+                    "node_refs": []
+                }
+        
+        result["processing_time"] = time.time() - start_time
+        return result
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Analysis failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "query": request.query,
+            "processing_time": time.time() - start_time
+        }
+
+@app.post("/ask")
+async def ask_question(request: dict):
+    """Simplified ask endpoint for frontend - complete analysis pipeline"""
+    query = request.get("question", request.get("query", ""))
+    
+    if not query:
+        raise HTTPException(status_code=400, detail="Question/query is required")
+    
+    # Use the analyze endpoint internally
+    analyze_request = AnalyzeRequest(
+        query=query,
+        top_k=request.get("top_k", 10),
+        include_summary=True
+    )
+    
+    return await analyze_query(analyze_request)
 
 def _compute_answer_path(node_ids: List[str]) -> tuple:
     """
