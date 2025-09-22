@@ -18,13 +18,16 @@ from datetime import datetime
 
 # Import our parsing and indexing modules
 from parse_repo import (
-    build_repository_graph, 
+    parse_repository, 
+    extract_functions,
+    build_dependency_graph,
+    build_repository_graph,
     build_repository_with_documents,
     generate_embedding_documents,
     make_document_for_node
 )
 from parser.utils import clone_repo
-from indexer.embedder import embed_documents, MODEL_NAME, get_embedding_dimension
+from indexer.embedder import embed_documents, embed_documents_simple, MODEL_NAME, get_embedding_dimension
 from indexer.qdrant_client import (
     QdrantClient, 
     create_or_recreate_collection, 
@@ -118,8 +121,8 @@ async def search_repository(request: SearchRequest):
             }
         
         # Generate embedding for the query
-        from indexer.embedder import embed_documents, MODEL_NAME
-        query_embedding = embed_documents([request.query], model_name=MODEL_NAME)
+        from indexer.embedder import embed_documents_simple, MODEL_NAME
+        query_embedding = embed_documents_simple([request.query], model_name=MODEL_NAME)
         
         if len(query_embedding) == 0:
             return {
@@ -414,7 +417,7 @@ async def _background_index_task(job_id: str, collection_name: str, qdrant_url: 
         # Generate embeddings
         active_jobs[job_id]["status"] = "generating_embeddings"
         logger.info(f"Generating embeddings with model: {model_name}")
-        embeddings = embed_documents(documents, model_name=model_name)
+        embeddings = embed_documents_simple(documents, model_name=model_name)
         
         # Connect to Qdrant
         active_jobs[job_id]["status"] = "connecting_qdrant"
@@ -570,7 +573,7 @@ async def _background_parse_and_index_task(job_id: str, repo_url: str, repo_path
         # Phase 3: Generate embeddings
         active_jobs[job_id]["status"] = "generating_embeddings"
         logger.info(f"Generating embeddings with model: {model_name}")
-        embeddings = embed_documents(documents, model_name=model_name)
+        embeddings = embed_documents_simple(documents, model_name=model_name)
         
         # Phase 4: Index to Qdrant
         active_jobs[job_id]["status"] = "indexing_to_qdrant"
