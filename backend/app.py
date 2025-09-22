@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import json
 import time
 import os
@@ -25,21 +26,8 @@ qdrant_client = None
 graph = None
 graph_data = None
 
-# Create FastAPI app
-app = FastAPI(title="RepoCanvas API", version="1.0.0")
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize Qdrant client on startup
-@app.on_event("startup")
-async def startup_event():
+# Initialize services on startup
+async def initialize_services():
     global qdrant_client, graph, graph_data
     
     # Initialize Qdrant client
@@ -78,6 +66,25 @@ async def startup_event():
             print(f"❌ Failed to load graph: {e}")
     
     print("🚀 Backend API started successfully!")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await initialize_services()
+    yield
+    # Shutdown - cleanup if needed
+
+# Create FastAPI app with lifespan
+app = FastAPI(title="RepoCanvas API", version="1.0.0", lifespan=lifespan)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Pydantic Models for API requests
 class ParseRequest(BaseModel):
@@ -278,7 +285,7 @@ async def parse_repository(request: ParseRequest):
 
 @app.post("/parse-and-index")
 async def parse_and_index_repository(request: ParseRequest):
-    """Parse repository and index to Qdrant using worker service"""
+    """Parse repository and index to Qdrant using worker service - async with job tracking"""
     try:
         # Forward request to worker service with optimization parameters
         worker_data = {
@@ -288,13 +295,10 @@ async def parse_and_index_repository(request: ParseRequest):
             "collection_name": settings.QDRANT_COLLECTION_NAME,
             "qdrant_url": settings.QDRANT_URL,
             "recreate_collection": True,
-            # Optimization parameters to reduce embeddings
-            "min_chunk_size": request.min_chunk_size,
-            "max_chunks_per_file": request.max_chunks_per_file,
-            "skip_large_files": request.skip_large_files,
-            "batch_size": request.batch_size
+            "model_name": settings.EMBEDDING_MODEL
         }
         
+        # Use the async worker endpoint that returns a job_id immediately
         response = await _call_worker_service("/parse-and-index", "POST", worker_data)
         return response
         
@@ -382,7 +386,7 @@ async def delete_job(job_id: str):
 async def get_graph():
     """Get the current loaded graph"""
     try:
-        with open("./data/graph.json", "r") as f:
+        with open("./data/graph.json", "r", encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return {

@@ -22,7 +22,7 @@ class Settings:
         )
         
         # Qdrant settings
-        self.QDRANT_URL: Optional[str] = os.getenv("QDRANT_URL")
+        self.QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
         self.QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
         self.QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "repocanvas")
         self.QDRANT_TIMEOUT: int = int(os.getenv("QDRANT_TIMEOUT", "30"))
