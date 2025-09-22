@@ -32,7 +32,7 @@ class Settings:
         
         # Worker service settings
         self.WORKER_URL: str = os.getenv("WORKER_URL", "http://localhost:8002")
-        self.WORKER_TIMEOUT: int = int(os.getenv("WORKER_TIMEOUT", "60"))
+        self.WORKER_TIMEOUT: int = int(os.getenv("WORKER_TIMEOUT", "1800"))  # 30 minutes for large repos
         
         # Summarizer settings
         self.SUMMARIZER_URL: str = os.getenv("SUMMARIZER_URL", "http://localhost:8001")
