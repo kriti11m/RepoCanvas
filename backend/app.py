@@ -85,6 +85,11 @@ class ParseRequest(BaseModel):
     repo_path: Optional[str] = None
     branch: str = "main"
     output_path: Optional[str] = None
+    # Optimization parameters for large repos
+    min_chunk_size: int = 50  # Minimum characters per chunk
+    max_chunks_per_file: int = 10  # Limit chunks per file
+    skip_large_files: bool = True  # Skip files > 10KB
+    batch_size: int = 100  # Batch size for embeddings
 
 class SearchRequest(BaseModel):
     query: str
@@ -275,14 +280,19 @@ async def parse_repository(request: ParseRequest):
 async def parse_and_index_repository(request: ParseRequest):
     """Parse repository and index to Qdrant using worker service"""
     try:
-        # Forward request to worker service
+        # Forward request to worker service with optimization parameters
         worker_data = {
             "repo_url": request.repo_url,
             "repo_path": request.repo_path,
             "branch": request.branch,
             "collection_name": settings.QDRANT_COLLECTION_NAME,
             "qdrant_url": settings.QDRANT_URL,
-            "recreate_collection": True
+            "recreate_collection": True,
+            # Optimization parameters to reduce embeddings
+            "min_chunk_size": request.min_chunk_size,
+            "max_chunks_per_file": request.max_chunks_per_file,
+            "skip_large_files": request.skip_large_files,
+            "batch_size": request.batch_size
         }
         
         response = await _call_worker_service("/parse-and-index", "POST", worker_data)
@@ -292,6 +302,35 @@ async def parse_and_index_repository(request: ParseRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse and index repository: {str(e)}")
+
+@app.post("/parse-and-index-async")
+async def parse_and_index_repository_async(request: ParseRequest):
+    """Parse repository and index to Qdrant asynchronously using worker service"""
+    try:
+        # Forward request to worker service with optimization parameters
+        worker_data = {
+            "repo_url": request.repo_url,
+            "repo_path": request.repo_path,
+            "branch": request.branch,
+            "collection_name": settings.QDRANT_COLLECTION_NAME,
+            "qdrant_url": settings.QDRANT_URL,
+            "recreate_collection": True,
+            # Optimization parameters to reduce embeddings
+            "min_chunk_size": request.min_chunk_size,
+            "max_chunks_per_file": request.max_chunks_per_file,
+            "skip_large_files": request.skip_large_files,
+            "batch_size": request.batch_size,
+            "async_processing": True  # Enable async processing
+        }
+        
+        # This should return a job_id immediately
+        response = await _call_worker_service("/parse-and-index-async", "POST", worker_data)
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start async parse and index job: {str(e)}")
 
 @app.get("/status/{job_id}")
 async def get_job_status(job_id: str):
