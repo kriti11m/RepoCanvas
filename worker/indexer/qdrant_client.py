@@ -204,7 +204,7 @@ def upsert_graph_data(
         id_to_node_map = {}
         
         for i, (node, payload) in enumerate(zip(nodes, node_payloads)):
-            point_id = f"node_{i}"
+            point_id = i  # Use integer ID for Qdrant
             point = PointStruct(
                 id=point_id,
                 vector=embeddings[i].tolist(),
@@ -217,8 +217,11 @@ def upsert_graph_data(
         edge_points = []
         zero_vector = [0.0] * vector_dim
         
+        # Start edge IDs after node IDs to avoid conflicts
+        edge_id_offset = len(nodes)
+        
         for i, (edge, payload) in enumerate(zip(edges, edge_payloads)):
-            point_id = f"edge_{i}"
+            point_id = edge_id_offset + i  # Use integer ID for Qdrant
             point = PointStruct(
                 id=point_id,
                 vector=zero_vector,  # Zero vector for edges
@@ -299,14 +302,54 @@ def get_collection_info(client: QdrantClient, collection_name: str) -> Dict[str,
         Dict: Collection information
     """
     try:
-        collection_info = client.get_collection(collection_name)
-        return {
-            'name': collection_name,
-            'status': collection_info.status,
-            'points_count': collection_info.points_count,
-            'vector_size': collection_info.config.params.vectors.size,
-            'distance': collection_info.config.params.vectors.distance
-        }
+        # Use direct HTTP request to get collection info
+        import requests
+        qdrant_url = "http://localhost:6333"  # Use default URL
+        
+        response = requests.get(f"{qdrant_url}/collections/{collection_name}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            result = data.get('result', {})
+            
+            # Extract collection info safely
+            points_count = result.get('points_count', 0)
+            indexed_vectors_count = result.get('indexed_vectors_count', 0)
+            status = result.get('status', 'unknown')
+            
+            # Get vector configuration
+            config = result.get('config', {})
+            params = config.get('params', {})
+            vectors = params.get('vectors', {})
+            
+            vector_size = vectors.get('size', 384)
+            distance = vectors.get('distance', 'Cosine')
+            
+            return {
+                'name': collection_name,
+                'status': status,
+                'points_count': points_count,
+                'indexed_vectors_count': indexed_vectors_count,
+                'vector_size': vector_size,
+                'distance': distance,
+                'exists': True
+            }
+        else:
+            return {'exists': False, 'name': collection_name}
+            
     except Exception as e:
         print(f"❌ Failed to get collection info: {e}")
-        return {}
+        # Try basic existence check
+        try:
+            collection_response = client.get_collection(collection_name)
+            return {
+                'name': collection_name,
+                'status': 'unknown',
+                'points_count': 0,
+                'indexed_vectors_count': 0,
+                'vector_size': 384,
+                'distance': 'Cosine',
+                'exists': True
+            }
+        except:
+            return {'exists': False, 'name': collection_name}

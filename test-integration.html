@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoCanvas Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { 
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 RepoCanvas Integration Test</h1>
+    <p>This page tests the integration between frontend and backend components.</p>
+
+    <div class="test-section">
+        <h2>1. Backend Health Check</h2>
+        <button onclick="testHealthCheck()">Check Backend Health</button>
+        <div id="health-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Repository Analysis Test</h2>
+        <input type="text" id="repo-url" placeholder="Enter GitHub repository URL (e.g., https://github.com/user/repo)" value="https://github.com/microsoft/vscode">
+        <button onclick="testAnalyzeRepo()">Analyze Repository</button>
+        <div id="analyze-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Chatbot Query Test</h2>
+        <input type="text" id="chat-query" placeholder="Enter query (e.g., 'show me authentication functions')" value="show me main functions">
+        <button onclick="testChatbotQuery()">Send Query</button>
+        <div id="chat-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Graph Data Test</h2>
+        <button onclick="testGraphData()">Load Graph Data</button>
+        <div id="graph-status"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            const formatted = JSON.stringify(response, null, 2);
+            element.innerHTML += `<pre>${formatted}</pre>`;
+        }
+
+        async function testHealthCheck() {
+            showStatus('health-status', 'Checking backend health...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('health-status', '✅ Backend is healthy!', 'success');
+                    showResponse('health-status', data);
+                } else {
+                    showStatus('health-status', '❌ Backend health check failed', 'error');
+                    showResponse('health-status', data);
+                }
+            } catch (error) {
+                showStatus('health-status', `❌ Cannot connect to backend: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAnalyzeRepo() {
+            const repoUrl = document.getElementById('repo-url').value;
+            if (!repoUrl.trim()) {
+                showStatus('analyze-status', 'Please enter a repository URL', 'error');
+                return;
+            }
+
+            showStatus('analyze-status', 'Starting repository analysis...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/parse-and-index`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        repo_url: repoUrl,
+                        branch: 'main',
+                        recreate_collection: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('analyze-status', '✅ Repository analysis started!', 'success');
+                    showResponse('analyze-status', data);
+                    
+                    if (data.job_id) {
+                        pollJobStatus('analyze-status', data.job_id);
+                    }
+                } else {
+                    showStatus('analyze-status', '❌ Repository analysis failed', 'error');
+                    showResponse('analyze-status', data);
+                }
+            } catch (error) {
+                showStatus('analyze-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function pollJobStatus(statusElementId, jobId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/status/${jobId}`);
+                const data = await response.json();
+                
+                showStatus(statusElementId, `Job Status: ${data.status}`, 'info');
+                showResponse(statusElementId, data);
+                
+                if (data.status === 'running' || data.status === 'pending') {
+                    setTimeout(() => pollJobStatus(statusElementId, jobId), 3000);
+                } else if (data.status === 'completed') {
+                    showStatus(statusElementId, '✅ Repository analysis completed!', 'success');
+                } else if (data.status === 'failed') {
+                    showStatus(statusElementId, '❌ Repository analysis failed', 'error');
+                }
+            } catch (error) {
+                showStatus(statusElementId, `❌ Error polling job status: ${error.message}`, 'error');
+            }
+        }
+
+        async function testChatbotQuery() {
+            const query = document.getElementById('chat-query').value;
+            if (!query.trim()) {
+                showStatus('chat-status', 'Please enter a query', 'error');
+                return;
+            }
+
+            showStatus('chat-status', 'Processing chatbot query...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: query
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('chat-status', '✅ Query processed successfully!', 'success');
+                    
+                    // Show summary
+                    if (data.snippets && data.snippets.length > 0) {
+                        const snippetsInfo = `Found ${data.snippets.length} code snippets`;
+                        showStatus('chat-status', snippetsInfo, 'info');
+                    }
+                    
+                    if (data.answer_path && data.answer_path.length > 0) {
+                        const pathInfo = `Found dependency path with ${data.answer_path.length} nodes`;
+                        showStatus('chat-status', pathInfo, 'info');
+                    }
+                    
+                    showResponse('chat-status', data);
+                } else {
+                    showStatus('chat-status', '❌ Query processing failed', 'error');
+                    showResponse('chat-status', data);
+                }
+            } catch (error) {
+                showStatus('chat-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGraphData() {
+            showStatus('graph-status', 'Loading graph data...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/graph`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('graph-status', '✅ Graph data loaded successfully!', 'success');
+                    
+                    const nodeCount = data.nodes ? data.nodes.length : 0;
+                    const edgeCount = data.edges ? data.edges.length : 0;
+                    showStatus('graph-status', `Found ${nodeCount} nodes and ${edgeCount} edges`, 'info');
+                    
+                    showResponse('graph-status', data);
+                } else {
+                    showStatus('graph-status', '❌ Failed to load graph data', 'error');
+                    showResponse('graph-status', data);
+                }
+            } catch (error) {
+                showStatus('graph-status', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            testHealthCheck();
+        };
+    </script>
+</body>
+</html>

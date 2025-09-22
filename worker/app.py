@@ -5,7 +5,7 @@ This service provides HTTP endpoints for the backend to call for repository anal
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl, validator
+from pydantic import BaseModel, HttpUrl, field_validator
 from typing import Optional, Dict, List, Any, Union
 import os
 import logging
@@ -68,9 +68,11 @@ class ParseRequest(BaseModel):
     branch: str = "main"
     output_path: Optional[str] = None
     
-    @validator('repo_url', 'repo_path')
-    def validate_repo_source(cls, v, values):
+    @field_validator('repo_url', 'repo_path')
+    @classmethod
+    def validate_repo_source(cls, v, info):
         # At least one of repo_url or repo_path must be provided
+        values = info.data if hasattr(info, 'data') else {}
         if not v and not values.get('repo_url') and not values.get('repo_path'):
             raise ValueError('Either repo_url or repo_path must be provided')
         return v
@@ -101,17 +103,35 @@ async def search_repository(request: SearchRequest):
         qdrant_client_url = request.qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
         client = QdrantClient(url=qdrant_client_url)
         
-        # Check if collection exists
+        # Check if collection exists and has indexed vectors
         try:
             collection_info = get_collection_info(client, request.collection_name)
-            if not collection_info or collection_info.get('points_count', 0) == 0:
+            if not collection_info or not collection_info.get('exists', False):
                 return {
                     "success": False,
-                    "error": f"Collection '{request.collection_name}' is empty or does not exist",
+                    "error": f"Collection '{request.collection_name}' does not exist. Please run repository analysis first.",
                     "results": [],
                     "query": request.query,
                     "total_results": 0
                 }
+            
+            points_count = collection_info.get('points_count', 0)
+            indexed_vectors_count = collection_info.get('indexed_vectors_count', 0)
+            
+            if points_count == 0:
+                return {
+                    "success": False,
+                    "error": f"Collection '{request.collection_name}' is empty. Please analyze a repository first.",
+                    "results": [],
+                    "query": request.query,
+                    "total_results": 0
+                }
+            
+            # For now, let's skip the indexing check since we know vectors exist but may not be indexed yet
+            # We'll try the search anyway and let Qdrant handle it
+            if indexed_vectors_count == 0 and points_count > 0:
+                logger.warning(f"Collection '{request.collection_name}' has {points_count} points but indexed_vectors_count is 0. Attempting search anyway.")
+            
         except Exception as e:
             return {
                 "success": False,
@@ -973,6 +993,80 @@ async def list_qdrant_collections():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to connect to Qdrant: {str(e)}")
+
+@app.post("/force-index")
+async def force_index_collection(request: dict):
+    """
+    Force indexing of vectors in Qdrant collection.
+    
+    This endpoint triggers the indexing process for vectors that have been
+    uploaded but not yet indexed for search.
+    """
+    collection_name = request.get("collection_name", "repocanvas")
+    qdrant_url = request.get("qdrant_url") or os.getenv("QDRANT_URL", "http://localhost:6333")
+    
+    try:
+        # Connect to Qdrant
+        client = QdrantClient(url=qdrant_url)
+        
+        # Check collection status
+        collection_info = get_collection_info(client, collection_name)
+        if not collection_info:
+            return {
+                "success": False,
+                "error": f"Collection '{collection_name}' does not exist"
+            }
+        
+        points_count = collection_info.get('points_count', 0)
+        indexed_vectors_count = collection_info.get('indexed_vectors_count', 0)
+        
+        if points_count == 0:
+            return {
+                "success": False,
+                "error": f"Collection '{collection_name}' is empty"
+            }
+        
+        # Force optimization/indexing
+        logger.info(f"Forcing indexing for collection '{collection_name}' with {points_count} points")
+        
+        # Trigger optimization which should force indexing
+        try:
+            # This API call forces Qdrant to optimize the collection and index vectors
+            import requests
+            optimize_url = f"{qdrant_url}/collections/{collection_name}/index"
+            response = requests.post(optimize_url, json={"wait": True})
+            
+            if response.status_code == 200:
+                # Check if indexing is now complete
+                updated_info = get_collection_info(client, collection_name)
+                updated_indexed = updated_info.get('indexed_vectors_count', 0)
+                
+                return {
+                    "success": True,
+                    "message": f"Indexing triggered for collection '{collection_name}'",
+                    "points_count": points_count,
+                    "indexed_vectors_before": indexed_vectors_count,
+                    "indexed_vectors_after": updated_indexed,
+                    "collection_name": collection_name
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Failed to trigger indexing: HTTP {response.status_code}"
+                }
+        except Exception as e:
+            logger.error(f"Failed to trigger indexing: {e}")
+            return {
+                "success": False,
+                "error": f"Failed to trigger indexing: {str(e)}"
+            }
+            
+    except Exception as e:
+        logger.error(f"Force index failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn
