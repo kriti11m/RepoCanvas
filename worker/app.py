@@ -33,6 +33,7 @@ from indexer.qdrant_client import (
     create_or_recreate_collection, 
     upsert_embeddings, 
     create_node_payloads,
+    upsert_graph_data,
     get_collection_info
 )
 
@@ -588,12 +589,21 @@ async def _background_parse_and_index_task(job_id: str, repo_url: str, repo_path
             if not success:
                 raise Exception(f"Failed to create collection: {collection_name}")
         
-        # Prepare and upsert
-        payloads = create_node_payloads(nodes)
-        mapping = upsert_embeddings(client, collection_name, embeddings, payloads)
+        # Upsert nodes and edges with enhanced function
+        mapping = upsert_graph_data(client, collection_name, nodes, edges, embeddings)
         
         if not mapping:
-            raise Exception("Failed to upsert embeddings")
+            raise Exception("Failed to upsert graph data")
+        
+        # Copy graph.json to backend data directory for loading
+        backend_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "backend", "data")
+        if os.path.exists(backend_data_dir):
+            backend_graph_path = os.path.join(backend_data_dir, "graph.json") 
+            try:
+                shutil.copy2(output_path, backend_graph_path)
+                logger.info(f"Graph file copied to backend: {backend_graph_path}")
+            except Exception as e:
+                logger.warning(f"Failed to copy graph to backend: {e}")
         
         # Calculate final statistics
         parse_stats = results['analysis_summary']

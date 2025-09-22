@@ -144,6 +144,107 @@ def create_node_payloads(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     return payloads
 
+def create_edge_payloads(edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Create payload dictionaries for edges to store in Qdrant.
+    
+    Args:
+        edges (List[Dict]): List of edge dictionaries
+    
+    Returns:
+        List[Dict]: List of payload dictionaries for edges
+    """
+    payloads = []
+    
+    for edge in edges:
+        payload = {
+            'edge_id': f"{edge.get('source', '')}-->{edge.get('target', '')}",
+            'source': edge.get('source', ''),
+            'target': edge.get('target', ''),
+            'relationship': edge.get('relationship', 'calls'),
+            'node_type': 'edge'  # Distinguish edges from nodes
+        }
+        payloads.append(payload)
+    
+    return payloads
+
+def upsert_graph_data(
+    client: QdrantClient,
+    collection_name: str,
+    nodes: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]],
+    embeddings: np.ndarray
+) -> Dict[str, str]:
+    """
+    Upsert both nodes and edges into the same Qdrant collection.
+    Nodes get real embeddings, edges get zero vectors.
+    
+    Args:
+        client: Qdrant client instance
+        collection_name: Name of the collection
+        nodes: List of node dictionaries
+        edges: List of edge dictionaries  
+        embeddings: Node embeddings (nodes only)
+    
+    Returns:
+        Dict mapping node IDs to Qdrant point IDs
+    """
+    try:
+        print(f"📊 Upserting graph data: {len(nodes)} nodes, {len(edges)} edges")
+        
+        # Create payloads for nodes and edges
+        node_payloads = create_node_payloads(nodes)
+        edge_payloads = create_edge_payloads(edges)
+        
+        # Get vector dimension from embeddings
+        vector_dim = embeddings.shape[1] if len(embeddings.shape) > 1 else len(embeddings[0])
+        
+        # Create points for nodes (with real embeddings)
+        node_points = []
+        id_to_node_map = {}
+        
+        for i, (node, payload) in enumerate(zip(nodes, node_payloads)):
+            point_id = f"node_{i}"
+            point = PointStruct(
+                id=point_id,
+                vector=embeddings[i].tolist(),
+                payload=payload
+            )
+            node_points.append(point)
+            id_to_node_map[node.get('id', '')] = point_id
+        
+        # Create points for edges (with zero vectors)
+        edge_points = []
+        zero_vector = [0.0] * vector_dim
+        
+        for i, (edge, payload) in enumerate(zip(edges, edge_payloads)):
+            point_id = f"edge_{i}"
+            point = PointStruct(
+                id=point_id,
+                vector=zero_vector,  # Zero vector for edges
+                payload=payload
+            )
+            edge_points.append(point)
+        
+        # Combine all points
+        all_points = node_points + edge_points
+        
+        # Batch upsert
+        batch_size = 100
+        total_batches = (len(all_points) + batch_size - 1) // batch_size
+        
+        for i in range(0, len(all_points), batch_size):
+            batch = all_points[i:i+batch_size]
+            client.upsert(collection_name=collection_name, points=batch)
+            print(f"  Batch {i//batch_size + 1}/{total_batches} completed")
+        
+        print(f"✅ Successfully upserted {len(node_points)} nodes and {len(edge_points)} edges")
+        return id_to_node_map
+        
+    except Exception as e:
+        print(f"❌ Failed to upsert graph data: {e}")
+        return {}
+
 def search_similar_nodes(
     client: QdrantClient,
     collection_name: str,
